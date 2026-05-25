@@ -50,9 +50,10 @@ var App = (function() {
             _settings.interpolation_method = 'rife';
         }
 
-        // Load ExtendScript into the host
-        var jsx = fs.readFileSync(_jsxPath, 'utf8');
-        csInterface.evalScript(jsx, function() {});
+        // Load ExtendScript via $.evalFile() so #include directives resolve
+        // relative to the jsx/ folder. Backslashes must be forward-slashed.
+        var jsxFwd = _jsxPath.split('\\').join('/');
+        csInterface.evalScript('$.evalFile("' + jsxFwd + '")', function() {});
 
         bindUI();
         applySettingsToUI(_settings);
