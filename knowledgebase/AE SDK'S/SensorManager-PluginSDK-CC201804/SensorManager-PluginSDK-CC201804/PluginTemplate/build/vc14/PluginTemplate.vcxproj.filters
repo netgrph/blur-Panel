@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="third_party">
+      <UniqueIdentifier>{f014b777-2b7f-48a5-afb0-4f62d99b9965}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\boost">
+      <UniqueIdentifier>{a42e0c4d-4be2-4f55-b711-6d77161378cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mgjsonWriter">
+      <UniqueIdentifier>{6886b95b-d07b-44ac-a205-259ae41b5cb9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\mgjsonWriter">
+      <UniqueIdentifier>{5533d277-09e7-41f6-9e40-1e0ec1649ce7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\third_party\boost\variant\variant.hpp">
+      <Filter>third_party\boost</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_DataTypesCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_HostAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_HostAPIAccess.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_PluginHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_PluginRegistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_PluginTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\SM_PluginBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\Template_Converter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicData.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicDataNum.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicDataNumArr.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicDataString.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonGroup.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonRoot.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticData.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\ISharedObject.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\SM_FwdDeclarations.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_PluginTypedefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_PluginException.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\SM_PluginFileIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataBool.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataNum.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataNumArr.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataString.h">
+      <Filter>Header Files\mgjsonWriter</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\public\source\PluginAPIImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\SM_DataTypesCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\SM_HostAPIAccess.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\SM_PluginRegistry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\Template_Converter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonDynamicDataNum.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonDynamicDataNumArr.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonDynamicDataString.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonGroup.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonRoot.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\SM_PluginFileIO-Win.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataBool.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataNum.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataNumArr.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataString.cpp">
+      <Filter>Source Files\mgjsonWriter</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PluginTemplate.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\resource\txt\MODULE_IDENTIFIER.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="..\..\resource\txt\SMPLUGINUIDS.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
+</Project>

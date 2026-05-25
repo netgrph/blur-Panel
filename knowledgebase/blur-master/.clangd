@@ -1,0 +1,5 @@
+If:
+  PathMatch: src\/.*pch\.h
+Diagnostics:
+  Suppress:
+    - "unused-includes"

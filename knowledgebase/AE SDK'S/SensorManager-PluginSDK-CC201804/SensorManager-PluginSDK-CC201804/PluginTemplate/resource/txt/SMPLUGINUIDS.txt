@@ -1,0 +1,15 @@
+{
+	"converter":[
+		{
+			"identifier":"com.adobe.sensor.template",
+			"name":[
+				{
+					"localeID":"en_US",
+					"value":"Template converter"
+				}
+			],
+			"version":1,
+			"extensions":["tmp","temp"]
+		}
+	]
+}

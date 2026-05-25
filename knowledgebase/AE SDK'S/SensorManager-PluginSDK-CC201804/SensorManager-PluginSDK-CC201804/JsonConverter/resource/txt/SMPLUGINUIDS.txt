@@ -1,0 +1,19 @@
+{
+	"converter":[
+		{
+			"identifier":"com.adobe.sensor.jsonConverter",
+			"name":[
+				{
+					"localeID":"en_US",
+					"value":"JSON"
+				},
+				{
+					"localeID":"it_IT",
+					"value":"JSON"
+				}
+			],
+			"version":1,
+			"extensions":["json", "JSON"]
+		}
+	]
+}
