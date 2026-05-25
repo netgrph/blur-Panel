@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Blur Panel</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── BLUR ─────────────────────────────────────────────── -->
+  <section class="card">
+    <div class="card-header" data-toggle="blur-body">
+      <span class="arrow" id="arrow-blur">▼</span>
+      <span>Blur</span>
+    </div>
+    <div class="card-body" id="blur-body">
+
+      <div class="row">
+        <label>Amount</label>
+        <div class="slider-group">
+          <input type="range" id="blur_amount" min="0" max="2" step="0.01" value="1.0">
+          <input type="number" id="blur_amount_num" min="0" max="20" step="0.01" value="1.0" class="num-input">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Weighting</label>
+        <select id="blur_weighting">
+          <option value="equal">Equal</option>
+          <option value="gaussian_sym">Gaussian (sym)</option>
+          <option value="gaussian">Gaussian</option>
+          <option value="gaussian_reverse">Gaussian (reverse)</option>
+          <option value="pyramid">Pyramid</option>
+          <option value="ascending">Ascending</option>
+          <option value="descending">Descending</option>
+          <option value="vegas">Vegas</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Gamma</label>
+        <div class="slider-group">
+          <input type="range" id="blur_gamma" min="0.1" max="3" step="0.01" value="1.0">
+          <input type="number" id="blur_gamma_num" min="0.1" max="10" step="0.01" value="1.0" class="num-input">
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── INTERPOLATION ─────────────────────────────────────── -->
+  <section class="card">
+    <div class="card-header" data-toggle="interp-body">
+      <span class="arrow" id="arrow-interp">▼</span>
+      <span>Interpolation</span>
+    </div>
+    <div class="card-body" id="interp-body">
+
+      <div class="row">
+        <label>Enable</label>
+        <label class="toggle">
+          <input type="checkbox" id="interpolate" checked>
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Target FPS</label>
+        <input type="number" id="interpolated_fps" min="1" step="1" value="1200" class="num-input wide">
+      </div>
+
+      <div class="row" id="method-row">
+        <label>Method</label>
+        <div class="radio-group">
+          <label><input type="radio" name="interp_method" value="svp" checked> SVP</label>
+          <label><input type="radio" name="interp_method" value="rife"> RIFE</label>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Deduplicate</label>
+        <label class="toggle">
+          <input type="checkbox" id="deduplicate" checked>
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <label>Pre-interpolate</label>
+        <label class="toggle">
+          <input type="checkbox" id="pre_interpolate">
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <div class="row" id="pre-fps-row">
+        <label>Pre target FPS</label>
+        <input type="number" id="pre_interpolated_fps" min="1" step="1" value="360" class="num-input wide">
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── OUTPUT ────────────────────────────────────────────── -->
+  <section class="card">
+    <div class="card-header" data-toggle="output-body">
+      <span class="arrow" id="arrow-output">▼</span>
+      <span>Output</span>
+    </div>
+    <div class="card-body" id="output-body">
+
+      <div class="row">
+        <label>Encode preset</label>
+        <select id="encode_preset">
+          <option value="h264">H.264</option>
+          <option value="h265">H.265 / HEVC</option>
+          <option value="vp9">VP9</option>
+          <option value="prores">ProRes</option>
+          <option value="dnxhd">DNxHD</option>
+          <option value="lossless">Lossless</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Quality (CRF)</label>
+        <div class="slider-group">
+          <input type="range" id="quality" min="0" max="51" step="1" value="16">
+          <input type="number" id="quality_num" min="0" max="51" step="1" value="16" class="num-input">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <label>GPU decode</label>
+        <label class="toggle">
+          <input type="checkbox" id="gpu_decoding" checked>
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <div class="row">
+        <label>GPU interpolate</label>
+        <label class="toggle">
+          <input type="checkbox" id="gpu_interpolation" checked>
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <div class="row">
+        <label>GPU encode</label>
+        <label class="toggle">
+          <input type="checkbox" id="gpu_encoding">
+          <span class="track"></span>
+        </label>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── FILTERS ────────────────────────────────────────────── -->
+  <section class="card">
+    <div class="card-header" data-toggle="filters-body">
+      <span class="arrow" id="arrow-filters">▶</span>
+      <span>Filters</span>
+    </div>
+    <div class="card-body hidden" id="filters-body">
+
+      <div class="row">
+        <label>Enable</label>
+        <label class="toggle">
+          <input type="checkbox" id="filters">
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Brightness</label>
+        <div class="slider-group">
+          <input type="range" id="brightness" min="0" max="2" step="0.01" value="1.0">
+          <input type="number" id="brightness_num" min="0" max="10" step="0.01" value="1.0" class="num-input">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Saturation</label>
+        <div class="slider-group">
+          <input type="range" id="saturation" min="0" max="2" step="0.01" value="1.0">
+          <input type="number" id="saturation_num" min="0" max="10" step="0.01" value="1.0" class="num-input">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Contrast</label>
+        <div class="slider-group">
+          <input type="range" id="contrast" min="0" max="2" step="0.01" value="1.0">
+          <input type="number" id="contrast_num" min="0" max="10" step="0.01" value="1.0" class="num-input">
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── ACTION ─────────────────────────────────────────────── -->
+  <div class="action-area">
+    <div id="host-label" class="host-label">—</div>
+    <button id="apply-btn" class="btn-apply" onclick="App.apply()">Apply</button>
+    <div id="progress-wrap" class="progress-wrap hidden">
+      <div class="progress-bar"><div id="progress-fill" class="progress-fill" style="width:0%"></div></div>
+      <div id="status-text" class="status-text">Initialising…</div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<script src="js/CSInterface.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

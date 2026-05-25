@@ -1,0 +1,284 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: -apple-system, "Adobe Clean", "Segoe UI", Arial, sans-serif;
+    font-size: 11px;
+    color: #c8c8c8;
+    background: #1e1e1e;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ── App wrapper ─────────────────────────────────────────────────────────── */
+
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding-bottom: 4px;
+}
+
+/* ── Cards (collapsible sections) ────────────────────────────────────────── */
+
+.card {
+    border-bottom: 1px solid #111;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #282828;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: #d0d0d0;
+}
+
+.card-header:hover { background: #303030; }
+
+.arrow {
+    font-size: 8px;
+    color: #888;
+    width: 10px;
+    display: inline-block;
+}
+
+.card-body {
+    padding: 8px 10px 10px;
+    background: #242424;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.card-body.hidden { display: none; }
+
+/* ── Row layout ──────────────────────────────────────────────────────────── */
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 20px;
+}
+
+.row > label:first-child {
+    flex: 0 0 110px;
+    color: #aaa;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.divider {
+    height: 1px;
+    background: #333;
+    margin: 2px 0;
+}
+
+/* ── Inputs ───────────────────────────────────────────────────────────────── */
+
+input[type="number"],
+input[type="text"],
+select {
+    background: #2e2e2e;
+    border: 1px solid #444;
+    border-radius: 3px;
+    color: #d8d8d8;
+    font-size: 11px;
+    height: 20px;
+    padding: 0 5px;
+    outline: none;
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+select:focus {
+    border-color: #0070d2;
+}
+
+select {
+    cursor: pointer;
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    padding-right: 20px;
+}
+
+select option { background: #2e2e2e; color: #d8d8d8; }
+
+.num-input { width: 52px; text-align: right; }
+.num-input.wide { width: 70px; }
+
+/* ── Slider + number pair ────────────────────────────────────────────────── */
+
+.slider-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    background: #444;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #0070d2;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover { background: #1a8fff; }
+
+input[type="range"]:focus { background: #555; }
+
+/* ── Toggle switch ───────────────────────────────────────────────────────── */
+
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 30px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.toggle input { display: none; }
+
+.track {
+    position: absolute;
+    inset: 0;
+    background: #444;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.track::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    background: #888;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.toggle input:checked + .track { background: #003e8a; }
+.toggle input:checked + .track::after { transform: translateX(14px); background: #0070d2; }
+
+/* ── Radio group ─────────────────────────────────────────────────────────── */
+
+.radio-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: #c8c8c8;
+}
+
+input[type="radio"] { cursor: pointer; accent-color: #0070d2; }
+
+/* ── Action area ─────────────────────────────────────────────────────────── */
+
+.action-area {
+    margin-top: auto;
+    padding: 10px;
+    background: #1a1a1a;
+    border-top: 1px solid #111;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.host-label {
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.btn-apply {
+    width: 100%;
+    height: 28px;
+    background: #0070d2;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: background 0.15s;
+}
+
+.btn-apply:hover   { background: #0058aa; }
+.btn-apply:active  { background: #004488; }
+
+/* When acting as Stop button */
+.btn-apply.stop { background: #8a1a00; }
+.btn-apply.stop:hover { background: #aa2200; }
+
+/* ── Progress ────────────────────────────────────────────────────────────── */
+
+.progress-wrap { display: flex; flex-direction: column; gap: 4px; }
+.progress-wrap.hidden { display: none; }
+
+.progress-bar {
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #0070d2;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.status-text {
+    font-size: 10px;
+    color: #888;
+    text-align: center;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #1e1e1e; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #666; }
