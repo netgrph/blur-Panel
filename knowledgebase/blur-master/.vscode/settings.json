@@ -1,0 +1,7 @@
+{
+  "clangd.arguments": [
+    "-header-insertion=never"
+  ],
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json"
+}

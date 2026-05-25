@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{FB56A2B9-91BA-4D1F-B42C-D090A8F0DA0C}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Plugin_Template</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <OutDir>..\..\..\public\libraries\windows\$(Platform)\$(Configuration)\</OutDir>
+    <TargetExt>.mgx</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <TargetExt>.mgx</TargetExt>
+    <OutDir>..\..\..\public\libraries\windows\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>DEBUG;_WINDOWS;_USRDLL;PLUGIN_TEMPLATE_EXPORTS;WIN_ENV=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../public/include/;../../source/;../../../third_party/;../../../public/include/mgjsonWriter/;../../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;PLUGIN_TEMPLATE_EXPORTS;WIN_ENV=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../public/include/;../../source/;../../../third_party/;../../../public/include/mgjsonWriter/;$(SolutionDir)..\..\include;../../include</AdditionalIncludeDirectories>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <OmitFramePointers>false</OmitFramePointers>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <OutputManifestFile>$(IntDir)$(TargetName)$(TargetExt).embed.manifest</OutputManifestFile>
+    </Manifest>
+    <ManifestResourceCompile>
+      <ResourceOutputFileName>$(IntDir)$(TargetName)$(TargetExt).embed.manifest.res</ResourceOutputFileName>
+    </ManifestResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\third_party\boost\variant\variant.hpp" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicData.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicDataNum.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicDataNumArr.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonDynamicDataString.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonGroup.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonRoot.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticData.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataBool.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataNum.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataNumArr.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\IMgjsonStaticDataString.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\ISharedObject.h" />
+    <ClInclude Include="..\..\..\public\include\mgjsonWriter\SM_FwdDeclarations.h" />
+    <ClInclude Include="..\..\..\public\include\SM_DataTypesCommon.h" />
+    <ClInclude Include="..\..\..\public\include\SM_HostAPI.h" />
+    <ClInclude Include="..\..\..\public\include\SM_HostAPIAccess.h" />
+    <ClInclude Include="..\..\..\public\include\SM_PluginFileIO.h" />
+    <ClInclude Include="..\..\..\public\include\SM_PluginHandler.h" />
+    <ClInclude Include="..\..\..\public\include\SM_PluginRegistry.h" />
+    <ClInclude Include="..\..\..\public\include\SM_PluginTypes.h" />
+    <ClInclude Include="..\..\include\FileMapper.h" />
+    <ClInclude Include="..\..\include\JsonArrayIterator.h" />
+    <ClInclude Include="..\..\include\JsonConverter.h" />
+    <ClInclude Include="..\..\include\JsonIterator.h" />
+    <ClInclude Include="..\..\include\JsonObjectIterator.h" />
+    <ClInclude Include="..\..\include\JsonParser.h" />
+    <ClInclude Include="..\..\include\SM_PluginBase.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonDynamicDataNum.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonDynamicDataNumArr.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonDynamicDataString.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonGroup.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonRoot.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataBool.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataNum.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataNumArr.cpp" />
+    <ClCompile Include="..\..\..\public\source\mgjsonWriter\IMgjsonStaticDataString.cpp" />
+    <ClCompile Include="..\..\..\public\source\PluginAPIImpl.cpp" />
+    <ClCompile Include="..\..\..\public\source\SM_DataTypesCommon.cpp" />
+    <ClCompile Include="..\..\..\public\source\SM_HostAPIAccess.cpp" />
+    <ClCompile Include="..\..\..\public\source\SM_PluginFileIO-Win.cpp" />
+    <ClCompile Include="..\..\..\public\source\SM_PluginRegistry.cpp" />
+    <ClCompile Include="..\..\source\FileMapper.cpp" />
+    <ClCompile Include="..\..\source\JsonArrayIterator.cpp" />
+    <ClCompile Include="..\..\source\JsonConverter.cpp" />
+    <ClCompile Include="..\..\source\JsonObjectIterator.cpp" />
+    <ClCompile Include="..\..\source\JsonParser.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="JsonConverter.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\resource\txt\MODULE_IDENTIFIER.txt" />
+    <Text Include="..\..\resource\txt\SMPLUGINUIDS.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

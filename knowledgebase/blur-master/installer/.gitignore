@@ -1,0 +1,10 @@
+output/
+
+resources/*.exe
+
+redist/*
+
+**/vapoursynth/*
+!**/vapoursynth/*.gitkeep
+**/ffmpeg/*
+!**/ffmpeg/*.gitkeep

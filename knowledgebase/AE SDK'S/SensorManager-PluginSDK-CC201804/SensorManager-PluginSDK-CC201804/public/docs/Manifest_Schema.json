@@ -1,0 +1,119 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "JSON Schema for manifest file of SM plugins",
+    "type": "object",
+    "properties": {
+        "converter": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/definitions/converter"
+            }
+        }
+    },
+    "required": [
+        "converter"
+    ],
+    "additionalProperties": false,
+    "definitions": {
+        "converter": {
+            "type": "object",
+            "description": "describes one converter in SM plugin",
+            "properties": {
+                "name": {
+                    "type": "array",
+                    "description": "describes the file format supported by the converter in different locale, en-US is mandatory.",
+                    "minItems": 1,
+                    "$ref": "#/definitions/localizedName"
+                },
+                "identifier": {
+                    "type": "string",
+                    "description": "describes unique id for this converter."
+                },
+                "version": {
+                    "type": "number",
+                    "description": "describes version for this converter."
+                },
+                "extensions": {
+                    "type": "array",
+                    "description": "describes the file extensions supported by this converter.",
+                    "minItems": 1,
+                    "items": "string"
+                },
+                "check_format": {
+                    "type": "array",
+                    "description": "describes if file format can be identified by one or more byte sequences at a fixed location within the file.",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/check_format"
+                     }
+                },
+                "force_converter": {
+                    "type": "boolean",
+                    "description": "describes whether this converter should be used in case another converter with same identifier and version is   present. Defaults to false. In case the other also has true for this value, then the first one is registered."
+                }
+            },
+            "required": [
+                "identifier",
+                "version",
+                "extensions"
+            ],
+            "additionalProperties": false
+        },
+        "check_format": {
+            "type": "object",
+            "description": "describes if file format can be identified by one or more byte sequences at a fixed location within the file.",
+            "properties": {
+                "offset": {
+                    "type": "number",
+                    "description": "describes the offset from where the byte sequence is expected in the file format, in bytes"
+                },
+                "length": {
+                    "type": "number",
+                    "description": "describes the length of the identifying sequence, in bytes."
+                },
+                "byte_seq": {
+                    "type": "string",
+                    "description": "describes the specific identifying sequence. e.g. %PDF or hex number \"0x\" "
+                }
+            },
+            "required": [
+                "offset",
+                "length",
+                "byte_seq"
+            ],
+            "additionalProperties": false
+        },
+        "localizedName": {
+            "type": "object",
+            "description": "specifies the value of name corresponding to locale id.",
+            "properties": {
+                "localeID": {
+                    "type": "string",
+                    "description": "specifies locale id.",
+                       "oneOf": [
+                            "en_US",
+                            "ja_JP",
+                            "ko_KR",
+                            "zh_CN",
+                            "de_DE",
+                            "fr_FR",
+                            "it_IT",
+                            "es_ES",
+                            "pt_BR",
+                            "ru_RU"
+                        ]
+                },
+                "value": {
+                    "type": "string",
+                    "description": "specifies the localized name."
+                }
+            },
+            "required": [
+                "localeID",
+                "value"
+            ],
+            "additionalProperties": false
+        }
+    }
+ }

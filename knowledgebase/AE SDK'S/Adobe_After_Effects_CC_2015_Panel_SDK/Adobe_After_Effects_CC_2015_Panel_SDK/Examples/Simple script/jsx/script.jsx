@@ -1,0 +1,1 @@
+﻿$._ext = {    popAlert : function()    {        alert("Hello world!");    }};
