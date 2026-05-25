@@ -1,0 +1,14 @@
+Windows Registry Editor Version 5.00
+
+; Allows unsigned CEP extensions (like Blur Panel) to load in After Effects and Premiere Pro.
+; Run this once by double-clicking and accepting the UAC prompt.
+; Covers Ae/Pr 2019 through latest.
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.9]
+"PlayerDebugMode"="1"
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.10]
+"PlayerDebugMode"="1"
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.11]
+"PlayerDebugMode"="1"
