@@ -78,7 +78,6 @@ App = (function() {
                             .replace(/\/\/@include[^\r\n]*/g, '');
             var allJsx  = aeSrc + '\n' + prSrc + '\n' + hostSrc;
             csInterface.evalScript(allJsx, function(r) {
-                console.log('JSX loaded, result:', r);
                 if (r && typeof r === 'string' && r.indexOf('Error') !== -1) {
                     _showBanner('ExtendScript load error: ' + r);
                 }
@@ -88,11 +87,6 @@ App = (function() {
             applySettingsToUI(_settings);
             wireCollapsibles();
 
-            // Show extension root in the host label for easy debugging
-            console.log('BlurPanel extRoot:', _extRoot);
-            console.log('BlurPanel blurCli:', _blurCli);
-            console.log('BlurPanel jsxPath:', _jsxPath);
-            console.log('BlurPanel appId:', _appId);
 
         } catch (e) {
             _showBanner('init() error: ' + e.message + ' — ' + e.stack);
@@ -145,6 +139,11 @@ App = (function() {
         for (var i = 0; i < radios.length; i++) {
             radios[i].addEventListener('change', saveFromUI);
         }
+
+        var prFmtRadios = document.querySelectorAll('input[name="prerender_format"]');
+        for (var i = 0; i < prFmtRadios.length; i++) {
+            prFmtRadios[i].addEventListener('change', saveFromUI);
+        }
     }
 
     function applySettingsToUI(s) {
@@ -171,6 +170,11 @@ App = (function() {
         var radios = document.querySelectorAll('input[name="interp_method"]');
         for (var i = 0; i < radios.length; i++) {
             radios[i].checked = (radios[i].value === s.interpolation_method);
+        }
+
+        var prFmtRadios = document.querySelectorAll('input[name="prerender_format"]');
+        for (var i = 0; i < prFmtRadios.length; i++) {
+            prFmtRadios[i].checked = (prFmtRadios[i].value === (s.prerender_format || 'avi'));
         }
 
         setVal('encode_preset',     s.encode_preset);
@@ -216,6 +220,7 @@ App = (function() {
         _settings.pre_interpolate      = getVal('pre_interpolate');
         _settings.pre_interpolated_fps = parseInt(getVal('pre_interpolated_fps'), 10);
 
+        _settings.prerender_format  = getRadio('prerender_format') || 'avi';
         _settings.encode_preset     = getVal('encode_preset');
         _settings.quality           = parseInt(getVal('quality'), 10);
         _settings.gpu_decoding      = getVal('gpu_decoding');
@@ -307,7 +312,7 @@ App = (function() {
 
     // ── Progress / status helpers ─────────────────────────────────────────────
 
-    var _progressRe = /Frame:\s*(\d+)\/(\d+)/;
+    var _progressRe = /(\d+)\/(\d+)/;
 
     function setStatus(text) {
         var el = document.getElementById('status-text');
@@ -367,14 +372,6 @@ App = (function() {
         setStatus('Running blur…');
         setProgress(0, 1);
 
-        try {
-            var inStat = fs.statSync(inputPath);
-            console.log('blur-cli input:', inputPath, 'bytes:', inStat.size);
-        } catch (e) {
-            console.log('blur-cli input stat error:', e.message);
-        }
-        console.log('blur-cli cmd:', _blurCli, '-i', inputPath, '-o', outputPath, '-c', cfgPath);
-
         // Set cwd to bin/ and inject vapoursynth dir into PATH.
         // Support two layouts:
         //   installer layout: blur-cli.exe + lib/vapoursynth/vspipe.exe  (preferred)
@@ -400,35 +397,28 @@ App = (function() {
         var stderrBuf = '';
         var stdoutBuf = '';
 
+        function _checkProgress(buf) {
+            var m = _progressRe.exec(buf);
+            if (m) setProgress(parseInt(m[1], 10), parseInt(m[2], 10));
+            return buf.slice(-512);
+        }
+
         _blurProc.stdout.on('data', function(chunk) {
-            stdoutBuf += chunk.toString();
-            console.log('blur-cli stdout:', chunk.toString());
+            var s = chunk.toString();
+            console.log('blur-cli stdout:', s);
+            stdoutBuf += s;
+            stdoutBuf = _checkProgress(stdoutBuf);
         });
 
         _blurProc.stderr.on('data', function(chunk) {
             var s = chunk.toString();
-            stderrBuf += s;
             console.log('blur-cli stderr:', s);
-            var m = _progressRe.exec(stderrBuf);
-            if (m) {
-                setProgress(parseInt(m[1], 10), parseInt(m[2], 10));
-                stderrBuf = stderrBuf.slice(-512);
-            }
+            stderrBuf += s;
+            stderrBuf = _checkProgress(stderrBuf);
         });
 
         _blurProc.on('close', function(code) {
             _blurProc = null;
-            console.log('blur-cli exit code:', code);
-            console.log('blur-cli stdout total:', stdoutBuf);
-
-            // Scan temp dir for anything blur-cli may have created
-            try {
-                var entries = fs.readdirSync(_tempDir);
-                var base = path.basename(outputPath, path.extname(outputPath));
-                var related = entries.filter(function(e) { return e.indexOf(base.slice(0, 20)) !== -1; });
-                console.log('Temp dir entries matching base name:', related);
-            } catch (e) {}
-
             if (code === 0) {
                 onDone(outputPath);
             } else {
@@ -446,11 +436,7 @@ App = (function() {
 
     function runAe() {
         setStatus('Reading composition…');
-        csInterface.evalScript('"__ping__"', function(ping) {
-            console.log('evalScript ping:', ping); // expect: __ping__
-        });
         csInterface.evalScript('ae_getActiveComp()', function(result) {
-            console.log('ae_getActiveComp result:', result);
             var info;
             try { info = JSON.parse(result); } catch (e) {
                 abort('ae_getActiveComp returned: ' + result);
@@ -459,41 +445,60 @@ App = (function() {
             if (info.error) { abort(info.error); return; }
 
             var baseName     = info.name.replace(/[<>:"/\\|?*]/g, '_');
-            var preRenderOut = path.join(_tempDir, baseName + '_prerender.avi');
-            var blurOut      = path.join(_tempDir, baseName + '_blur.mp4');
+            var _stamp       = Date.now();
+            var _isMp4Mode   = (_settings.prerender_format || 'avi') === 'mp4';
+            // Always render AVI lossless from AE — for MP4 mode we transcode
+            // to lossless H.264 (CRF 0) afterwards using our bundled ffmpeg.
+            // AE's scripting API has no way to set H.264 bitrate programmatically,
+            // so the ffmpeg transcode is the only reliable path to "max quality MP4".
+            var aviRenderOut = path.join(_tempDir, baseName + '_prerender_' + _stamp + '.avi');
+            var blurOut      = path.join(_tempDir, baseName + '_blur_' + _stamp + '.mp4');
 
             setStatus('Pre-rendering "' + info.name + '"…');
 
-            csInterface.evalScript('ae_preRender(' + JSON.stringify(preRenderOut) + ')', function(res) {
-                console.log('ae_preRender result:', res);
+            csInterface.evalScript('ae_preRender(' + JSON.stringify(aviRenderOut) + ',true)', function(res) {
                 var r;
                 try { r = JSON.parse(res); } catch (e) { abort('Pre-render response: ' + res); return; }
                 if (r.error) { abort(r.error); return; }
 
-                // AE may have changed the extension — use the actual path it wrote to.
-                var actualInput = (r.actualPath || preRenderOut).split('/').join(path.sep);
-                console.log('Pre-render actual path:', actualInput);
+                var aviInput = (r.actualPath || aviRenderOut).split('/').join(path.sep);
 
-                var cfgPath = writeCfg(info.fps);
-                runBlur(actualInput, blurOut, cfgPath, function(blurredPath) {
-                    // Verify the blur output file exists before calling ExtendScript
-                    if (!fs.existsSync(blurredPath)) {
-                        abort('Blur output not found: ' + blurredPath);
-                        return;
-                    }
-                    var blurSize = fs.statSync(blurredPath).size;
-                    console.log('Blur output exists:', blurredPath, 'bytes:', blurSize);
-
-                    setStatus('Importing result…');
-                    csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(blurredPath) + ')', function(ir) {
-                        console.log('ae_importAndAddLayer result:', ir);
-                        var irObj;
-                        try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
-                        if (irObj.error) { abort(irObj.error); return; }
-                        finish('Done — blurred layer added.');
-                        try { fs.unlinkSync(preRenderOut); } catch (e) {}
+                function runBlurAndImport(blurInput) {
+                    var cfgPath = writeCfg(info.fps);
+                    runBlur(blurInput, blurOut, cfgPath, function(blurredPath) {
+                        if (!fs.existsSync(blurredPath)) {
+                            abort('Blur output not found: ' + blurredPath);
+                            return;
+                        }
+                        setStatus('Importing result…');
+                        csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(blurredPath) + ')', function(ir) {
+                            var irObj;
+                            try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
+                            if (irObj.error) { abort(irObj.error); return; }
+                            finish('Done — blurred layer added.');
+                            try { fs.unlinkSync(aviRenderOut); } catch (e) {}
+                        });
                     });
-                });
+                }
+
+                if (_isMp4Mode) {
+                    // Transcode lossless AVI → lossless H.264 MP4 (CRF 0, fast preset)
+                    var mp4Input   = aviInput.replace(/\.avi$/i, '_mp4.mp4');
+                    var _ffmpegExe = path.join(_binDir, 'lib', 'ffmpeg', 'ffmpeg.exe');
+                    setStatus('Transcoding to lossless MP4…');
+                    var _ffProc = child_process.spawn(_ffmpegExe, [
+                        '-y', '-i', aviInput,
+                        '-c:v', 'libx264', '-crf', '0', '-preset', 'fast', '-an',
+                        mp4Input
+                    ]);
+                    _ffProc.on('close', function(code) {
+                        try { fs.unlinkSync(aviInput); } catch (e) {}
+                        if (code !== 0) { abort('ffmpeg transcode failed (exit ' + code + ')'); return; }
+                        runBlurAndImport(mp4Input);
+                    });
+                } else {
+                    runBlurAndImport(aviInput);
+                }
             });
         });
     }
@@ -503,7 +508,6 @@ App = (function() {
     function runPr() {
         setStatus('Reading sequence…');
         csInterface.evalScript('pr_getActiveSequence()', function(result) {
-            console.log('pr_getActiveSequence result:', result);
             var info;
             try { info = JSON.parse(result); } catch (e) {
                 abort('pr_getActiveSequence returned: ' + result);
@@ -518,7 +522,6 @@ App = (function() {
             setStatus('Exporting "' + info.name + '" via AME…');
 
             csInterface.evalScript('pr_exportSequence(' + JSON.stringify(exportOut) + ')', function(res) {
-                console.log('pr_exportSequence result:', res);
                 var r;
                 try { r = JSON.parse(res); } catch (e) { abort('Export response: ' + res); return; }
                 if (r.error) { abort(r.error); return; }
@@ -555,7 +558,6 @@ App = (function() {
     // ── Public API ────────────────────────────────────────────────────────────
 
     function apply() {
-        console.log('BlurPanel: apply() called, _running=', _running);
         if (_running) return;
         _running = true;
         setApplyBusy(true);

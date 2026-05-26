@@ -39,7 +39,9 @@ function ae_getActiveComp() {
     }
 }
 
-function ae_preRender(outputPath) {
+// useLossless=true  → apply Verlustfrei/Lossless template (AVI path)
+// useLossless=false → use AE's current H.264 output module settings (MP4 path)
+function ae_preRender(outputPath, useLossless) {
     try {
         var item = app.project.activeItem;
         if (item === null || item === undefined || !(item instanceof CompItem)) {
@@ -47,6 +49,20 @@ function ae_preRender(outputPath) {
         }
         var rqItem = app.project.renderQueue.items.add(item);
         var om = rqItem.outputModule(1);
+        var _tplInfo = 'skipped';
+        if (useLossless) {
+            // Template name is locale-specific; $.locale returns OS locale e.g. "de_DE"
+            var _lang    = String($.locale || 'en').substring(0, 2).toLowerCase();
+            var _tplMap  = { de: 'Verlustfrei', fr: 'Sans perte', es: 'Sin perdida',
+                             ja: 'ロスレス', ko: '무손실', zh: '无损' };
+            var _tplPri  = _tplMap[_lang] || 'Lossless';
+            var _tplList = [_tplPri, 'Lossless', 'Verlustfrei'];
+            var _ti;
+            for (_ti = 0; _ti < _tplList.length; _ti++) {
+                try { om.applyTemplate(_tplList[_ti]); _tplInfo = 'ok:' + _tplList[_ti]; break; }
+                catch (e2) { _tplInfo = 'err(' + _tplList[_ti] + '):' + String(e2).substring(0, 80); }
+            }
+        }
         om.file = new File(outputPath);
         app.project.renderQueue.render();
         // AE may change the extension to match the output module codec —
@@ -54,7 +70,7 @@ function ae_preRender(outputPath) {
         var actualPath = om.file.fsName;
         rqItem.remove();
         var safePath = String(actualPath).replace(/\\/g, '/').replace(/"/g, "'");
-        return '{"success":true,"actualPath":"' + safePath + '"}';
+        return '{"success":true,"actualPath":"' + safePath + '","tpl":"' + _ae_esc(_tplInfo) + '"}';
     } catch (e) {
         return _ae_err('ae_preRender: ' + e);
     }
