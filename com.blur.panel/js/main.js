@@ -312,7 +312,8 @@ App = (function() {
 
     // ── Progress / status helpers ─────────────────────────────────────────────
 
-    var _progressRe = /(\d+)\/(\d+)/;
+    // No module-level regex — _checkProgress creates a fresh /g instance each call
+    // so it always picks the LAST N/M in the buffer, not the first (stale) one.
 
     function setStatus(text) {
         var el = document.getElementById('phase-text');
@@ -385,7 +386,6 @@ App = (function() {
         }
 
         setStatus('Running blur…');
-        setProgress(0, 1);
 
         // Set cwd to bin/ and inject vapoursynth dir into PATH.
         // Support two layouts:
@@ -413,9 +413,14 @@ App = (function() {
         var stdoutBuf = '';
 
         function _checkProgress(buf) {
-            var m = _progressRe.exec(buf);
-            if (m) setProgress(parseInt(m[1], 10), parseInt(m[2], 10));
-            return buf.slice(-512);
+            var re = /(\d+)\/(\d+)/g;
+            var m, last;
+            while ((m = re.exec(buf)) !== null) { last = m; }
+            if (last) setProgress(parseInt(last[1], 10), parseInt(last[2], 10));
+            // Discard everything up to the last newline so old lines don't
+            // pollute the next regex search.
+            var nl = buf.lastIndexOf('\n');
+            return nl >= 0 ? buf.slice(nl + 1) : buf.slice(-100);
         }
 
         _blurProc.stdout.on('data', function(chunk) {
