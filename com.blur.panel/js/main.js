@@ -403,8 +403,8 @@ App = (function() {
 
     function runAe() {
         setStatus('Reading composition…');
-        csInterface.evalScript('typeof ae_getActiveComp', function(t) {
-            console.log('typeof ae_getActiveComp:', t);
+        csInterface.evalScript('"__ping__"', function(ping) {
+            console.log('evalScript ping:', ping); // expect: __ping__
         });
         csInterface.evalScript('ae_getActiveComp()', function(result) {
             console.log('ae_getActiveComp result:', result);
