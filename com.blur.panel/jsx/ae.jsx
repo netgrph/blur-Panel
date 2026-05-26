@@ -3,6 +3,8 @@
  * ES3 only. No JSON.stringify - strings are built manually for compatibility.
  */
 
+var BLUR_HQ_TEMPLATE_NAME = 'Blur Panel HQ';
+
 function _ae_esc(s) {
     return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '').replace(/\n/g, ' ');
 }
@@ -19,73 +21,6 @@ function _ae_ok(fields) {
 }
 function _ae_err(msg) {
     return '{"error":"' + _ae_esc(msg) + '"}';
-}
-
-// ─── Bitrate-patch helpers (H.264 pre-render path) ───────────────────────────
-// getSettings(STRING_SETTABLE) returns a nested object, not a string. We walk
-// it recursively, find any "*Bitrate*" leaf, and build a parallel patched
-// object to pass back through setSettings.
-
-function _ae_findBitrate(obj, prefix, out) {
-    var k, v, p;
-    if (obj === null || typeof obj !== 'object') return;
-    for (k in obj) {
-        if (!obj.hasOwnProperty(k)) continue;
-        v = obj[k];
-        p = prefix ? (prefix + ' > ' + k) : k;
-        if (k.toLowerCase().indexOf('bitrate') !== -1
-            && (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')) {
-            out.push({ path: p, value: v });
-        }
-        if (v !== null && typeof v === 'object') {
-            _ae_findBitrate(v, p, out);
-        }
-    }
-}
-
-function _ae_patchBitrate(obj, targetMbps) {
-    var k, v, out;
-    if (obj === null || typeof obj !== 'object') return obj;
-    out = {};
-    for (k in obj) {
-        if (!obj.hasOwnProperty(k)) continue;
-        v = obj[k];
-        if (k.toLowerCase().indexOf('bitrate') !== -1) {
-            if      (typeof v === 'number') out[k] = targetMbps;
-            else if (typeof v === 'string') out[k] = String(targetMbps);
-            else if (v !== null && typeof v === 'object') out[k] = _ae_patchBitrate(v, targetMbps);
-            else out[k] = v;
-        } else if (v !== null && typeof v === 'object') {
-            out[k] = _ae_patchBitrate(v, targetMbps);
-        } else {
-            out[k] = v;
-        }
-    }
-    return out;
-}
-
-function _ae_diagJson(diag) {
-    var parts = [], k, v, i, item, sub;
-    for (k in diag) {
-        if (!diag.hasOwnProperty(k)) continue;
-        v = diag[k];
-        if (v === null || v === undefined) {
-            parts.push('"' + k + '":null');
-        } else if (typeof v === 'boolean' || typeof v === 'number') {
-            parts.push('"' + k + '":' + v);
-        } else if (typeof v === 'string') {
-            parts.push('"' + k + '":"' + _ae_esc(v) + '"');
-        } else if (v instanceof Array) {
-            sub = [];
-            for (i = 0; i < v.length && i < 8; i++) {
-                item = v[i];
-                sub.push('{"path":"' + _ae_esc(String(item.path).substring(0, 80))
-                       + '","value":"' + _ae_esc(String(item.value).substring(0, 40)) + '"}');
-            }
-            parts.push('"' + k + '":[' + sub.join(',') + ']');
-        }
-    }
-    return '{' + parts.join(',') + '}';
 }
 
 function ae_getActiveComp() {
@@ -107,11 +42,11 @@ function ae_getActiveComp() {
 }
 
 // useLossless=true  → apply Lossless/Verlustfrei template (AVI)
-// useLossless=false → apply best stock H.264 template, then patch every Bitrate-named
-//                     leaf in the OM settings object to a resolution-aware target via
-//                     setSettings(). Nothing is saved as a template — settings die with
-//                     the RQ item when we remove it. Target stays under H.264 codec
-//                     level caps to avoid silent clamping.
+// useLossless=false → prefer the user-created "Blur Panel HQ" template (set up via
+//                     Edit > Templates > Output Module...). If missing, fall back to
+//                     any stock H.264 template (typically maxes at 40 Mbps default).
+// AE's scripting API has no setSettings path for video codec/bitrate, so a custom
+// template the user defines once is the only way to get higher bitrates programmatically.
 function ae_preRender(outputPath, useLossless) {
     try {
         var item = app.project.activeItem;
@@ -120,106 +55,72 @@ function ae_preRender(outputPath, useLossless) {
         }
         var rqItem = app.project.renderQueue.items.add(item);
         var om = rqItem.outputModule(1);
-        var _tplInfo = 'skipped';
-        var _tplList = [], _ti, _availTpls;
+        var tplInfo = 'skipped';
+        var hasHqTemplate = false;
+        var availTpls = [];
+        try { availTpls = om.templates || []; } catch (eList) { availTpls = []; }
 
-        // Build the template candidate list from om.templates (locale-aware) so
-        // we don't depend on English template names. The codec brand "H.264"
-        // never translates; "Lossless" does (de:Verlustfrei, fr:Sans perte, …).
-        try { _availTpls = om.templates || []; } catch (eTplList) { _availTpls = []; }
-        for (_ti = 0; _ti < _availTpls.length; _ti++) {
-            var _nm = String(_availTpls[_ti]);
-            var _lc = _nm.toLowerCase();
-            if (useLossless) {
-                if (_lc.indexOf('lossless')     !== -1 ||
-                    _lc.indexOf('verlustfrei')  !== -1 ||
-                    _lc.indexOf('sans perte')   !== -1 ||
-                    _lc.indexOf('sin perdida')  !== -1 ||
-                    _nm.indexOf('ロスレス')      !== -1 ||
-                    _nm.indexOf('무손실')         !== -1 ||
-                    _nm.indexOf('无损')          !== -1) {
-                    _tplList.push(_nm);
+        var i, nm, lc;
+
+        // 1) Prefer the user-created HQ template
+        if (!useLossless) {
+            for (i = 0; i < availTpls.length; i++) {
+                if (String(availTpls[i]) === BLUR_HQ_TEMPLATE_NAME) {
+                    hasHqTemplate = true;
+                    break;
                 }
-            } else {
-                if (_lc.indexOf('h.264') !== -1 || _lc.indexOf('h264') !== -1) {
-                    _tplList.push(_nm);
+            }
+            if (hasHqTemplate) {
+                try {
+                    om.applyTemplate(BLUR_HQ_TEMPLATE_NAME);
+                    tplInfo = 'hq:' + BLUR_HQ_TEMPLATE_NAME;
+                } catch (eHq) {
+                    tplInfo = 'err(hq):' + String(eHq).substring(0, 80);
+                    hasHqTemplate = false;
                 }
             }
         }
-        // For H.264, prefer "4K"-named templates first — they typically use a
-        // higher H.264 codec Level so the bitrate cap is higher.
-        if (!useLossless) {
-            _tplList.sort(function(a, b) {
-                var aK = String(a).toLowerCase().indexOf('4k') !== -1 ? 0 : 1;
-                var bK = String(b).toLowerCase().indexOf('4k') !== -1 ? 0 : 1;
-                return aK - bK;
-            });
-        }
 
-        for (_ti = 0; _ti < _tplList.length; _ti++) {
-            try { om.applyTemplate(_tplList[_ti]); _tplInfo = 'ok:' + _tplList[_ti]; break; }
-            catch (e2) { _tplInfo = 'err(' + _tplList[_ti] + '):' + String(e2).substring(0, 60); }
-        }
-        if (_tplList.length === 0) _tplInfo = 'no-match(' + _availTpls.length + ' avail)';
-
-        // H.264 path: patch every "*Bitrate*" leaf in the OM settings object.
-        // Target chosen per resolution to stay under H.264 codec-level caps —
-        // asking for more than the level allows silently clamps to default.
-        //   ≤ 1920px (1080p)  → 50 Mbps   (Level 4.1)
-        //   ≤ 2560px (1440p)  → 100 Mbps
-        //   > 2560px (4K+)    → 240 Mbps  (Level 5.1)
-        // STRING_SETTABLE = 1. The documented enum is GetSettingsFormat; some
-        // AE versions also expose OMSettingsFormat as an alias. Fall back to the
-        // raw integer if neither symbol is defined.
-        var _SETTABLE = 1;
-        try { if (typeof GetSettingsFormat !== 'undefined' && GetSettingsFormat.STRING_SETTABLE != null)
-                _SETTABLE = GetSettingsFormat.STRING_SETTABLE; } catch (eEnum1) {}
-        try { if (_SETTABLE === 1 && typeof OMSettingsFormat !== 'undefined' && OMSettingsFormat.STRING_SETTABLE != null)
-                _SETTABLE = OMSettingsFormat.STRING_SETTABLE; } catch (eEnum2) {}
-
-        var _diag = { target: 0, before: [], after: [], applied: false,
-                      error: null, topKeys: [], tplCount: _availTpls.length, tplSample: [] };
-        // Sample first 8 available template names so we know what's actually
-        // installed in this AE locale.
-        for (_ti = 0; _ti < _availTpls.length && _ti < 8; _ti++) {
-            _diag.tplSample.push({ path: '#' + _ti, value: String(_availTpls[_ti]) });
-        }
-        if (!useLossless) {
-            var _maxDim = item.width > item.height ? item.width : item.height;
-            var _bitrate;
-            if      (_maxDim <= 1920) _bitrate = 50;
-            else if (_maxDim <= 2560) _bitrate = 100;
-            else                      _bitrate = 240;
-            _diag.target = _bitrate;
-            try {
-                var _raw = om.getSettings(_SETTABLE);
-                // Dump top-level keys so we can see what AE actually returned.
-                var _tk;
-                if (_raw && typeof _raw === 'object') {
-                    for (_tk in _raw) {
-                        if (_raw.hasOwnProperty(_tk)) {
-                            _diag.topKeys.push({ path: _tk, value: typeof _raw[_tk] });
-                        }
-                    }
-                }
-                _ae_findBitrate(_raw, '', _diag.before);
-                if (_diag.before.length > 0) {
-                    var _patched = _ae_patchBitrate(_raw, _bitrate);
-                    try {
-                        om.setSettings(_patched);
-                        _diag.applied = true;
-                        // AE docs: OM ref invalidates after setSettings — must re-fetch.
-                        om = rqItem.outputModule(1);
-                        _ae_findBitrate(om.getSettings(_SETTABLE), '', _diag.after);
-                    } catch (eSet) {
-                        _diag.error = 'set:' + String(eSet).substring(0, 120);
+        // 2) Fallback — locale-aware substring match against stock templates
+        if (!hasHqTemplate) {
+            var tplList = [];
+            for (i = 0; i < availTpls.length; i++) {
+                nm = String(availTpls[i]);
+                lc = nm.toLowerCase();
+                if (useLossless) {
+                    if (lc.indexOf('lossless')     !== -1 ||
+                        lc.indexOf('verlustfrei')  !== -1 ||
+                        lc.indexOf('sans perte')   !== -1 ||
+                        lc.indexOf('sin perdida')  !== -1 ||
+                        nm.indexOf('ロスレス')      !== -1 ||
+                        nm.indexOf('무손실')         !== -1 ||
+                        nm.indexOf('无损')          !== -1) {
+                        tplList.push(nm);
                     }
                 } else {
-                    _diag.error = 'no bitrate keys (tpl=' + _tplInfo + ')';
+                    if (lc.indexOf('h.264') !== -1 || lc.indexOf('h264') !== -1) {
+                        tplList.push(nm);
+                    }
                 }
-            } catch (eGet) {
-                _diag.error = 'get:' + String(eGet).substring(0, 120);
             }
+            // Prefer 4K-named H.264 templates first (higher base bitrate cap)
+            if (!useLossless) {
+                tplList.sort(function(a, b) {
+                    var aK = String(a).toLowerCase().indexOf('4k') !== -1 ? 0 : 1;
+                    var bK = String(b).toLowerCase().indexOf('4k') !== -1 ? 0 : 1;
+                    return aK - bK;
+                });
+            }
+            for (i = 0; i < tplList.length; i++) {
+                try {
+                    om.applyTemplate(tplList[i]);
+                    tplInfo = 'fallback:' + tplList[i];
+                    break;
+                } catch (eApply) {
+                    tplInfo = 'err(' + tplList[i] + '):' + String(eApply).substring(0, 60);
+                }
+            }
+            if (tplList.length === 0) tplInfo = 'no-match(' + availTpls.length + ' avail)';
         }
 
         om.file = new File(outputPath);
@@ -230,10 +131,89 @@ function ae_preRender(outputPath, useLossless) {
         rqItem.remove();
         var safePath = String(actualPath).replace(/\\/g, '/').replace(/"/g, "'");
         return '{"success":true,"actualPath":"' + safePath
-            + '","tpl":"' + _ae_esc(_tplInfo)
-            + '","bitrate":' + _ae_diagJson(_diag) + '}';
+            + '","tpl":"' + _ae_esc(tplInfo)
+            + '","hasHqTemplate":' + (hasHqTemplate ? 'true' : 'false') + '}';
     } catch (e) {
         return _ae_err('ae_preRender: ' + e);
+    }
+}
+
+// Probe whether "Blur Panel HQ" exists without rendering. Requires any comp in the
+// project (active preferred); wraps in an undo group so the temporary RQ item is
+// one consolidated undo step the user can dismiss.
+function ae_hasHqTemplate() {
+    try {
+        var item = app.project.activeItem;
+        var i;
+        if (!item || !(item instanceof CompItem)) {
+            for (i = 1; i <= app.project.numItems; i++) {
+                if (app.project.item(i) instanceof CompItem) { item = app.project.item(i); break; }
+            }
+        }
+        if (!item || !(item instanceof CompItem)) {
+            return '{"success":true,"present":false,"reason":"no comp"}';
+        }
+        app.beginUndoGroup('Blur Panel: template probe');
+        var probeItem = app.project.renderQueue.items.add(item);
+        var om = probeItem.outputModule(1);
+        var arr = [];
+        try { arr = om.templates || []; } catch (eT) {}
+        var present = false;
+        for (i = 0; i < arr.length; i++) {
+            if (String(arr[i]) === BLUR_HQ_TEMPLATE_NAME) { present = true; break; }
+        }
+        probeItem.remove();
+        app.endUndoGroup();
+        return '{"success":true,"present":' + (present ? 'true' : 'false')
+            + ',"templateCount":' + arr.length + '}';
+    } catch (e) {
+        return _ae_err('ae_hasHqTemplate: ' + e);
+    }
+}
+
+// Open AE's "Edit > Templates > Output Module..." dialog. app.executeCommand
+// silently no-ops on unknown IDs and the ID varies across AE versions, so we
+// resolve it dynamically via findMenuCommandId() with localized labels, then
+// fall back to historical numeric IDs. Returns which method/id actually worked
+// (or {error} if nothing was found) so the panel can fall back to instructions.
+function ae_openOMTemplateEditor() {
+    try {
+        // Bring AE to the foreground so the dialog isn't hidden behind the panel.
+        try { app.activate(); } catch (eAct) {}
+        var labels = [
+            'Output Module...',         // English
+            'Ausgabemodul...',          // German
+            'Module de sortie...',      // French
+            'Modulo di output...',      // Italian
+            'Módulo de salida...',      // Spanish
+            'Módulo de saída...',       // Portuguese
+            'Moduł wyjściowy...',       // Polish
+            'Модуль вывода...',         // Russian
+            '出力モジュール...',         // Japanese
+            '输出模块...',                // Simplified Chinese
+            '輸出模組...',                // Traditional Chinese
+            '출력 모듈...'                // Korean
+        ];
+        var i, cid;
+        for (i = 0; i < labels.length; i++) {
+            try {
+                cid = app.findMenuCommandId(labels[i]);
+                if (cid && cid > 0) {
+                    app.executeCommand(cid);
+                    return '{"success":true,"id":' + cid + ',"method":"findMenuCommandId","label":"' + _ae_esc(labels[i]) + '"}';
+                }
+            } catch (e1) {}
+        }
+        // Fallback: known historical IDs across AE versions. executeCommand
+        // silently no-ops on bad IDs so we can't tell which actually worked —
+        // but firing all of them is harmless (no dialog opens for wrong IDs).
+        var fallbacks = [3075, 2360, 2359, 3076, 2361];
+        for (i = 0; i < fallbacks.length; i++) {
+            try { app.executeCommand(fallbacks[i]); } catch (e2) {}
+        }
+        return '{"success":true,"method":"fallback","ids":"' + fallbacks.join(',') + '"}';
+    } catch (e) {
+        return _ae_err('ae_openOMTemplateEditor: ' + e);
     }
 }
 

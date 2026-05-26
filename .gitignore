@@ -1,0 +1,6 @@
+# Compiled blur-master binaries — copied into com.blur.panel/bin/ at release
+# build time. Tracked in their own source repo, not here. ~460 MB.
+knowledgebase/blur/
+
+# Per-user runtime settings written by the panel at runtime.
+com.blur.panel/config/user-settings.json
