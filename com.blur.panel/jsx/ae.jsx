@@ -21,6 +21,73 @@ function _ae_err(msg) {
     return '{"error":"' + _ae_esc(msg) + '"}';
 }
 
+// ─── Bitrate-patch helpers (H.264 pre-render path) ───────────────────────────
+// getSettings(STRING_SETTABLE) returns a nested object, not a string. We walk
+// it recursively, find any "*Bitrate*" leaf, and build a parallel patched
+// object to pass back through setSettings.
+
+function _ae_findBitrate(obj, prefix, out) {
+    var k, v, p;
+    if (obj === null || typeof obj !== 'object') return;
+    for (k in obj) {
+        if (!obj.hasOwnProperty(k)) continue;
+        v = obj[k];
+        p = prefix ? (prefix + ' > ' + k) : k;
+        if (k.toLowerCase().indexOf('bitrate') !== -1
+            && (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')) {
+            out.push({ path: p, value: v });
+        }
+        if (v !== null && typeof v === 'object') {
+            _ae_findBitrate(v, p, out);
+        }
+    }
+}
+
+function _ae_patchBitrate(obj, targetMbps) {
+    var k, v, out;
+    if (obj === null || typeof obj !== 'object') return obj;
+    out = {};
+    for (k in obj) {
+        if (!obj.hasOwnProperty(k)) continue;
+        v = obj[k];
+        if (k.toLowerCase().indexOf('bitrate') !== -1) {
+            if      (typeof v === 'number') out[k] = targetMbps;
+            else if (typeof v === 'string') out[k] = String(targetMbps);
+            else if (v !== null && typeof v === 'object') out[k] = _ae_patchBitrate(v, targetMbps);
+            else out[k] = v;
+        } else if (v !== null && typeof v === 'object') {
+            out[k] = _ae_patchBitrate(v, targetMbps);
+        } else {
+            out[k] = v;
+        }
+    }
+    return out;
+}
+
+function _ae_diagJson(diag) {
+    var parts = [], k, v, i, item, sub;
+    for (k in diag) {
+        if (!diag.hasOwnProperty(k)) continue;
+        v = diag[k];
+        if (v === null || v === undefined) {
+            parts.push('"' + k + '":null');
+        } else if (typeof v === 'boolean' || typeof v === 'number') {
+            parts.push('"' + k + '":' + v);
+        } else if (typeof v === 'string') {
+            parts.push('"' + k + '":"' + _ae_esc(v) + '"');
+        } else if (v instanceof Array) {
+            sub = [];
+            for (i = 0; i < v.length && i < 8; i++) {
+                item = v[i];
+                sub.push('{"path":"' + _ae_esc(String(item.path).substring(0, 80))
+                       + '","value":"' + _ae_esc(String(item.value).substring(0, 40)) + '"}');
+            }
+            parts.push('"' + k + '":[' + sub.join(',') + ']');
+        }
+    }
+    return '{' + parts.join(',') + '}';
+}
+
 function ae_getActiveComp() {
     try {
         var item = app.project.activeItem;
@@ -40,9 +107,11 @@ function ae_getActiveComp() {
 }
 
 // useLossless=true  → apply Lossless/Verlustfrei template (AVI)
-// useLossless=false → apply best stock H.264 template, then patch bitrate to 300 Mbps
-//                     on the live OM via setSettings(STRING_SETTABLE). Nothing is saved
-//                     as a template — settings die with the RQ item when we remove it.
+// useLossless=false → apply best stock H.264 template, then patch every Bitrate-named
+//                     leaf in the OM settings object to a resolution-aware target via
+//                     setSettings(). Nothing is saved as a template — settings die with
+//                     the RQ item when we remove it. Target stays under H.264 codec
+//                     level caps to avoid silent clamping.
 function ae_preRender(outputPath, useLossless) {
     try {
         var item = app.project.activeItem;
@@ -71,17 +140,49 @@ function ae_preRender(outputPath, useLossless) {
             catch (e2) { _tplInfo = 'err(' + _tplList[_ti] + '):' + String(e2).substring(0, 80); }
         }
 
-        // H.264 path: boost bitrate to 300 Mbps inline on the live OM. Silently no-ops
-        // if AE's settings format doesn't match — render proceeds at base-template bitrate.
+        // H.264 path: patch every "*Bitrate*" leaf in the OM settings object.
+        // Target chosen per resolution to stay under H.264 codec-level caps —
+        // asking for more than the level allows silently clamps to default.
+        //   ≤ 1920px (1080p)  → 50 Mbps   (Level 4.1)
+        //   ≤ 2560px (1440p)  → 100 Mbps
+        //   > 2560px (4K+)    → 240 Mbps  (Level 5.1)
+        // STRING_SETTABLE = 1. The documented enum is GetSettingsFormat; some
+        // AE versions also expose OMSettingsFormat as an alias. Fall back to the
+        // raw integer if neither symbol is defined.
+        var _SETTABLE = 1;
+        try { if (typeof GetSettingsFormat !== 'undefined' && GetSettingsFormat.STRING_SETTABLE != null)
+                _SETTABLE = GetSettingsFormat.STRING_SETTABLE; } catch (eEnum1) {}
+        try { if (_SETTABLE === 1 && typeof OMSettingsFormat !== 'undefined' && OMSettingsFormat.STRING_SETTABLE != null)
+                _SETTABLE = OMSettingsFormat.STRING_SETTABLE; } catch (eEnum2) {}
+
+        var _diag = { target: 0, before: [], after: [], applied: false, error: null };
         if (!useLossless) {
+            var _maxDim = item.width > item.height ? item.width : item.height;
+            var _bitrate;
+            if      (_maxDim <= 1920) _bitrate = 50;
+            else if (_maxDim <= 2560) _bitrate = 100;
+            else                      _bitrate = 240;
+            _diag.target = _bitrate;
             try {
-                var _s = om.getSettings(OMSettingsFormat.STRING_SETTABLE);
-                if (typeof _s === 'string' && _s.length > 0) {
-                    _s = _s.replace(/(Target Bitrate \[Mbps\])[^\n\r]*/g, '$1: 300');
-                    _s = _s.replace(/(Max Bitrate \[Mbps\])[^\n\r]*/g,    '$1: 300');
-                    try { om.setSettings(OMSettingsFormat.STRING_SETTABLE, _s); } catch (e3) {}
+                var _raw = om.getSettings(_SETTABLE);
+                _ae_findBitrate(_raw, '', _diag.before);
+                if (_diag.before.length > 0) {
+                    var _patched = _ae_patchBitrate(_raw, _bitrate);
+                    try {
+                        om.setSettings(_patched);
+                        _diag.applied = true;
+                        // AE docs: OM ref invalidates after setSettings — must re-fetch.
+                        om = rqItem.outputModule(1);
+                        _ae_findBitrate(om.getSettings(_SETTABLE), '', _diag.after);
+                    } catch (eSet) {
+                        _diag.error = 'set:' + String(eSet).substring(0, 120);
+                    }
+                } else {
+                    _diag.error = 'no bitrate keys in settings';
                 }
-            } catch (e4) {}
+            } catch (eGet) {
+                _diag.error = 'get:' + String(eGet).substring(0, 120);
+            }
         }
 
         om.file = new File(outputPath);
@@ -91,7 +192,9 @@ function ae_preRender(outputPath, useLossless) {
         var actualPath = om.file.fsName;
         rqItem.remove();
         var safePath = String(actualPath).replace(/\\/g, '/').replace(/"/g, "'");
-        return '{"success":true,"actualPath":"' + safePath + '","tpl":"' + _ae_esc(_tplInfo) + '"}';
+        return '{"success":true,"actualPath":"' + safePath
+            + '","tpl":"' + _ae_esc(_tplInfo)
+            + '","bitrate":' + _ae_diagJson(_diag) + '}';
     } catch (e) {
         return _ae_err('ae_preRender: ' + e);
     }

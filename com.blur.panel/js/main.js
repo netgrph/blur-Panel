@@ -140,10 +140,6 @@ App = (function() {
             radios[i].addEventListener('change', saveFromUI);
         }
 
-        var prFmtRadios = document.querySelectorAll('input[name="prerender_format"]');
-        for (var i = 0; i < prFmtRadios.length; i++) {
-            prFmtRadios[i].addEventListener('change', saveFromUI);
-        }
     }
 
     function applySettingsToUI(s) {
@@ -170,11 +166,6 @@ App = (function() {
         var radios = document.querySelectorAll('input[name="interp_method"]');
         for (var i = 0; i < radios.length; i++) {
             radios[i].checked = (radios[i].value === s.interpolation_method);
-        }
-
-        var prFmtRadios = document.querySelectorAll('input[name="prerender_format"]');
-        for (var i = 0; i < prFmtRadios.length; i++) {
-            prFmtRadios[i].checked = (prFmtRadios[i].value === (s.prerender_format || 'avi'));
         }
 
         setVal('encode_preset',     s.encode_preset);
@@ -220,7 +211,6 @@ App = (function() {
         _settings.pre_interpolate      = getVal('pre_interpolate');
         _settings.pre_interpolated_fps = parseInt(getVal('pre_interpolated_fps'), 10);
 
-        _settings.prerender_format  = getRadio('prerender_format') || 'avi';
         _settings.encode_preset     = getVal('encode_preset');
         _settings.quality           = parseInt(getVal('quality'), 10);
         _settings.gpu_decoding      = getVal('gpu_decoding');
@@ -464,43 +454,38 @@ App = (function() {
             }
             if (info.error) { abort(info.error); return; }
 
-            var baseName     = info.name.replace(/[<>:"/\\|?*]/g, '_');
-            var _stamp       = Date.now();
-            var aviRenderOut = path.join(_tempDir, baseName + '_prerender_' + _stamp + '.avi');
-            var blurOut      = path.join(_tempDir, baseName + '_blur_' + _stamp + '.mp4');
+            var baseName    = info.name.replace(/[<>:"/\\|?*]/g, '_');
+            var _stamp      = Date.now();
+            var mp4RenderOut = path.join(_tempDir, baseName + '_prerender_' + _stamp + '.mp4');
+            var blurOut     = path.join(_tempDir, baseName + '_blur_' + _stamp + '.mp4');
 
             setStatus('Pre-rendering "' + info.name + '"…');
 
-            csInterface.evalScript('ae_preRender(' + JSON.stringify(aviRenderOut) + ',true)', function(res) {
+            csInterface.evalScript('ae_preRender(' + JSON.stringify(mp4RenderOut) + ',false)', function(res) {
                 var r;
                 try { r = JSON.parse(res); } catch (e) { abort('Pre-render response: ' + res); return; }
                 if (r.error) { abort(r.error); return; }
 
-                var aviInput = (r.actualPath || aviRenderOut).split('/').join(path.sep);
+                console.log('BlurPanel pre-render: template=' + r.tpl
+                          + ' bitrate=' + JSON.stringify(r.bitrate));
 
-                function runBlurAndImport(blurInput) {
-                    var cfgPath = writeCfg(info.fps);
-                    runBlur(blurInput, blurOut, cfgPath, function(blurredPath) {
-                        if (!fs.existsSync(blurredPath)) {
-                            abort('Blur output not found: ' + blurredPath);
-                            return;
-                        }
-                        setStatus('Importing result…');
-                        csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(blurredPath) + ')', function(ir) {
-                            var irObj;
-                            try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
-                            if (irObj.error) { abort(irObj.error); return; }
-                            finish('Done — blurred layer added.');
-                            try { fs.unlinkSync(aviRenderOut); } catch (e) {}
-                        });
+                var mp4Input = (r.actualPath || mp4RenderOut).split('/').join(path.sep);
+
+                var cfgPath = writeCfg(info.fps);
+                runBlur(mp4Input, blurOut, cfgPath, function(blurredPath) {
+                    if (!fs.existsSync(blurredPath)) {
+                        abort('Blur output not found: ' + blurredPath);
+                        return;
+                    }
+                    setStatus('Importing result…');
+                    csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(blurredPath) + ')', function(ir) {
+                        var irObj;
+                        try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
+                        if (irObj.error) { abort(irObj.error); return; }
+                        finish('Done — blurred layer added.');
+                        try { fs.unlinkSync(mp4RenderOut); } catch (e) {}
                     });
-                }
-
-                // Pass the lossless AVI directly to blur-cli for both modes.
-                // An ffmpeg AVI→H.264 transcode corrupts dimensions (x264 rounds
-                // height down to a multiple of 16: 1080→1072) and is unnecessary
-                // since the AVI is already lossless and blur-cli reads AVI natively.
-                runBlurAndImport(aviInput);
+                });
             });
         });
     }
@@ -538,13 +523,15 @@ App = (function() {
 
                         var cfgPath = writeCfg(info.fps);
                         runBlur(exportOut, blurOut, cfgPath, function(blurredPath) {
-                            setStatus('Importing result…');
-                            csInterface.evalScript('pr_importToSequence(' + JSON.stringify(blurredPath) + ')', function(ir) {
-                                var irObj;
-                                try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
-                                if (irObj.error) { abort(irObj.error); return; }
-                                finish('Done — blurred clip added.');
-                                try { fs.unlinkSync(exportOut); } catch (e) {}
+                            fixDimensions(blurredPath, info.width, info.height, function(finalPath) {
+                                setStatus('Importing result…');
+                                csInterface.evalScript('pr_importToSequence(' + JSON.stringify(finalPath) + ')', function(ir) {
+                                    var irObj;
+                                    try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
+                                    if (irObj.error) { abort(irObj.error); return; }
+                                    finish('Done — blurred clip added.');
+                                    try { fs.unlinkSync(exportOut); } catch (e) {}
+                                });
                             });
                         });
                     } else if (elapsed >= timeout) {
