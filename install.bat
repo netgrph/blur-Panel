@@ -44,9 +44,9 @@ echo         OK
 :: ── 3. Copy panel (including bundled blur-master binaries) to CEP folder ─────
 
 if exist "%INSTALL_DIR%" (
-    echo  [2/2] Updating existing installation...
+    echo  [2/3] Updating existing installation...
 ) else (
-    echo  [2/2] Installing panel...
+    echo  [2/3] Installing panel...
 )
 
 if not exist "%CEP_DIR%" mkdir "%CEP_DIR%"
@@ -62,6 +62,32 @@ if !errorlevel! geq 8 (
 )
 
 echo         OK  ^>  %INSTALL_DIR%
+
+:: ── 4. Remove any previously-installed AE startup script ─────────────────────
+::      (older installer versions copied blur_panel_template.jsx into every AE
+::       Scripts\Startup folder. The panel now patches the OM inline at render
+::       time, so the startup script is obsolete — clean it up.)
+
+echo  [3/3] Cleaning up legacy AE startup script...
+
+set "AE_APPDATA=%APPDATA%\Adobe\After Effects"
+set "REMOVE_COUNT=0"
+
+if exist "%AE_APPDATA%" (
+    for /d %%v in ("%AE_APPDATA%\*") do (
+        if exist "%%v\Scripts\Startup\blur_panel_template.jsx" (
+            del /F /Q "%%v\Scripts\Startup\blur_panel_template.jsx" >nul 2>&1
+            if !errorlevel! equ 0 set /a REMOVE_COUNT+=1
+        )
+    )
+)
+
+if !REMOVE_COUNT! gtr 0 (
+    echo         OK  ^>  removed from !REMOVE_COUNT! AE version^(s^)
+) else (
+    echo         OK  ^>  nothing to clean up
+)
+
 echo.
 echo  ===========================================
 echo   Installation complete!
