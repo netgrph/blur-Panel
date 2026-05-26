@@ -121,24 +121,46 @@ function ae_preRender(outputPath, useLossless) {
         var rqItem = app.project.renderQueue.items.add(item);
         var om = rqItem.outputModule(1);
         var _tplInfo = 'skipped';
-        var _tplList, _ti;
-        if (useLossless) {
-            var _lang   = String($.locale || 'en').substring(0, 2).toLowerCase();
-            var _tplMap = { de: 'Verlustfrei', fr: 'Sans perte', es: 'Sin perdida',
-                            ja: 'ロスレス', ko: '무손실', zh: '无损' };
-            _tplList = [_tplMap[_lang] || 'Lossless', 'Lossless', 'Verlustfrei'];
-        } else {
-            _tplList = [
-                'H.264 4K',
-                'H.264 - Match Render Settings - 15 Mbps',
-                'H.264',
-                'H.264 - Low Complexity'
-            ];
+        var _tplList = [], _ti, _availTpls;
+
+        // Build the template candidate list from om.templates (locale-aware) so
+        // we don't depend on English template names. The codec brand "H.264"
+        // never translates; "Lossless" does (de:Verlustfrei, fr:Sans perte, …).
+        try { _availTpls = om.templates || []; } catch (eTplList) { _availTpls = []; }
+        for (_ti = 0; _ti < _availTpls.length; _ti++) {
+            var _nm = String(_availTpls[_ti]);
+            var _lc = _nm.toLowerCase();
+            if (useLossless) {
+                if (_lc.indexOf('lossless')     !== -1 ||
+                    _lc.indexOf('verlustfrei')  !== -1 ||
+                    _lc.indexOf('sans perte')   !== -1 ||
+                    _lc.indexOf('sin perdida')  !== -1 ||
+                    _nm.indexOf('ロスレス')      !== -1 ||
+                    _nm.indexOf('무손실')         !== -1 ||
+                    _nm.indexOf('无损')          !== -1) {
+                    _tplList.push(_nm);
+                }
+            } else {
+                if (_lc.indexOf('h.264') !== -1 || _lc.indexOf('h264') !== -1) {
+                    _tplList.push(_nm);
+                }
+            }
         }
+        // For H.264, prefer "4K"-named templates first — they typically use a
+        // higher H.264 codec Level so the bitrate cap is higher.
+        if (!useLossless) {
+            _tplList.sort(function(a, b) {
+                var aK = String(a).toLowerCase().indexOf('4k') !== -1 ? 0 : 1;
+                var bK = String(b).toLowerCase().indexOf('4k') !== -1 ? 0 : 1;
+                return aK - bK;
+            });
+        }
+
         for (_ti = 0; _ti < _tplList.length; _ti++) {
             try { om.applyTemplate(_tplList[_ti]); _tplInfo = 'ok:' + _tplList[_ti]; break; }
-            catch (e2) { _tplInfo = 'err(' + _tplList[_ti] + '):' + String(e2).substring(0, 80); }
+            catch (e2) { _tplInfo = 'err(' + _tplList[_ti] + '):' + String(e2).substring(0, 60); }
         }
+        if (_tplList.length === 0) _tplInfo = 'no-match(' + _availTpls.length + ' avail)';
 
         // H.264 path: patch every "*Bitrate*" leaf in the OM settings object.
         // Target chosen per resolution to stay under H.264 codec-level caps —
@@ -155,7 +177,13 @@ function ae_preRender(outputPath, useLossless) {
         try { if (_SETTABLE === 1 && typeof OMSettingsFormat !== 'undefined' && OMSettingsFormat.STRING_SETTABLE != null)
                 _SETTABLE = OMSettingsFormat.STRING_SETTABLE; } catch (eEnum2) {}
 
-        var _diag = { target: 0, before: [], after: [], applied: false, error: null };
+        var _diag = { target: 0, before: [], after: [], applied: false,
+                      error: null, topKeys: [], tplCount: _availTpls.length, tplSample: [] };
+        // Sample first 8 available template names so we know what's actually
+        // installed in this AE locale.
+        for (_ti = 0; _ti < _availTpls.length && _ti < 8; _ti++) {
+            _diag.tplSample.push({ path: '#' + _ti, value: String(_availTpls[_ti]) });
+        }
         if (!useLossless) {
             var _maxDim = item.width > item.height ? item.width : item.height;
             var _bitrate;
@@ -165,6 +193,15 @@ function ae_preRender(outputPath, useLossless) {
             _diag.target = _bitrate;
             try {
                 var _raw = om.getSettings(_SETTABLE);
+                // Dump top-level keys so we can see what AE actually returned.
+                var _tk;
+                if (_raw && typeof _raw === 'object') {
+                    for (_tk in _raw) {
+                        if (_raw.hasOwnProperty(_tk)) {
+                            _diag.topKeys.push({ path: _tk, value: typeof _raw[_tk] });
+                        }
+                    }
+                }
                 _ae_findBitrate(_raw, '', _diag.before);
                 if (_diag.before.length > 0) {
                     var _patched = _ae_patchBitrate(_raw, _bitrate);
@@ -178,7 +215,7 @@ function ae_preRender(outputPath, useLossless) {
                         _diag.error = 'set:' + String(eSet).substring(0, 120);
                     }
                 } else {
-                    _diag.error = 'no bitrate keys in settings';
+                    _diag.error = 'no bitrate keys (tpl=' + _tplInfo + ')';
                 }
             } catch (eGet) {
                 _diag.error = 'get:' + String(eGet).substring(0, 120);
