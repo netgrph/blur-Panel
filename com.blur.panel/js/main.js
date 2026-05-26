@@ -429,6 +429,14 @@ App = (function() {
 
                 var cfgPath = writeCfg(info.fps);
                 runBlur(preRenderOut, blurOut, cfgPath, function(blurredPath) {
+                    // Verify the blur output file exists before calling ExtendScript
+                    if (!fs.existsSync(blurredPath)) {
+                        abort('Blur output not found: ' + blurredPath);
+                        return;
+                    }
+                    var blurSize = fs.statSync(blurredPath).size;
+                    console.log('Blur output exists:', blurredPath, 'bytes:', blurSize);
+
                     setStatus('Importing result…');
                     csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(blurredPath) + ')', function(ir) {
                         console.log('ae_importAndAddLayer result:', ir);

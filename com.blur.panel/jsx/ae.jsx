@@ -57,17 +57,39 @@ function ae_preRender(outputPath) {
 }
 
 function ae_importAndAddLayer(filePath) {
+    // Self-contained: no helper function calls so nothing external can be missing.
     try {
+        // After a render, activeItem may have changed — search all comps.
         var item = app.project.activeItem;
-        if (item === null || item === undefined || !(item instanceof CompItem)) {
-            return _ae_err('No composition is selected.');
+        if (!item || !(item instanceof CompItem)) {
+            // Fallback: find the first open comp
+            var i;
+            for (i = 1; i <= app.project.numItems; i++) {
+                if (app.project.item(i) instanceof CompItem) {
+                    item = app.project.item(i);
+                    break;
+                }
+            }
         }
-        var opts    = new ImportOptions(new File(filePath));
+        if (!item || !(item instanceof CompItem)) {
+            return '{"error":"ae_importAndAddLayer: no CompItem found in project"}';
+        }
+
+        var f = new File(filePath);
+        if (!f.exists) {
+            return '{"error":"ae_importAndAddLayer: file not found: ' + filePath + '"}';
+        }
+
+        var opts    = new ImportOptions(f);
         var footage = app.project.importFile(opts);
-        var layer   = item.layers.add(footage);
+        if (!footage) {
+            return '{"error":"ae_importAndAddLayer: importFile returned null"}';
+        }
+        var layer = item.layers.add(footage);
         layer.moveToBeginning();
-        return '{"success":true,"layerName":"' + _ae_esc(layer.name) + '"}';
+        return '{"success":true}';
     } catch (e) {
-        return _ae_err('ae_importAndAddLayer: ' + e);
+        var msg = String(e).replace(/\\/g, '/').replace(/"/g, "'");
+        return '{"error":"ae_importAndAddLayer caught: ' + msg + '"}';
     }
 }
