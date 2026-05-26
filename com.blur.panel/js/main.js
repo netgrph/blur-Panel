@@ -502,12 +502,15 @@ App = (function() {
                 }
 
                 if (_isMp4Mode) {
-                    // Transcode lossless AVI → lossless H.264 MP4 (CRF 0, fast preset)
+                    // Transcode lossless AVI → lossless H.264 MP4 (CRF 0, fast preset).
+                    // -vf scale= pins the output to exact comp dimensions; libx264 otherwise
+                    // rounds width down to the nearest multiple of 16 (1080 → 1072).
                     var mp4Input   = aviInput.replace(/\.avi$/i, '_mp4.mp4');
                     var _ffmpegExe = path.join(_binDir, 'lib', 'ffmpeg', 'ffmpeg.exe');
                     setStatus('Transcoding to lossless MP4…');
                     var _ffProc = child_process.spawn(_ffmpegExe, [
                         '-y', '-i', aviInput,
+                        '-vf', 'scale=' + info.width + ':' + info.height,
                         '-c:v', 'libx264', '-crf', '0', '-preset', 'fast', '-an',
                         mp4Input
                     ]);
