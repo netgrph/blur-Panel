@@ -26,6 +26,7 @@ var Settings = (function() {
         interpolated_fps:     1200,
         interpolation_method: 'svp',
         deduplicate:          true,
+        deduplicate_method:   'svp',
         pre_interpolate:      false,
         pre_interpolated_fps: 360,
 
