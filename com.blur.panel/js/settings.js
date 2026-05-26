@@ -31,6 +31,7 @@ var Settings = (function() {
         pre_interpolated_fps: 360,
 
         // Output
+        prerender_format: 'avi',
         encode_preset:    'h264',
         quality:          16,
         gpu_decoding:     true,
