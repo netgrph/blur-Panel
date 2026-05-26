@@ -466,11 +466,6 @@ App = (function() {
 
             var baseName     = info.name.replace(/[<>:"/\\|?*]/g, '_');
             var _stamp       = Date.now();
-            var _isMp4Mode   = (_settings.prerender_format || 'avi') === 'mp4';
-            // Always render AVI lossless from AE — for MP4 mode we transcode
-            // to lossless H.264 (CRF 0) afterwards using our bundled ffmpeg.
-            // AE's scripting API has no way to set H.264 bitrate programmatically,
-            // so the ffmpeg transcode is the only reliable path to "max quality MP4".
             var aviRenderOut = path.join(_tempDir, baseName + '_prerender_' + _stamp + '.avi');
             var blurOut      = path.join(_tempDir, baseName + '_blur_' + _stamp + '.mp4');
 
@@ -501,27 +496,11 @@ App = (function() {
                     });
                 }
 
-                if (_isMp4Mode) {
-                    // Transcode lossless AVI → lossless H.264 MP4 (CRF 0, fast preset).
-                    // -vf scale= pins the output to exact comp dimensions; libx264 otherwise
-                    // rounds width down to the nearest multiple of 16 (1080 → 1072).
-                    var mp4Input   = aviInput.replace(/\.avi$/i, '_mp4.mp4');
-                    var _ffmpegExe = path.join(_binDir, 'lib', 'ffmpeg', 'ffmpeg.exe');
-                    setStatus('Transcoding to lossless MP4…');
-                    var _ffProc = child_process.spawn(_ffmpegExe, [
-                        '-y', '-i', aviInput,
-                        '-vf', 'scale=' + info.width + ':' + info.height,
-                        '-c:v', 'libx264', '-crf', '0', '-preset', 'fast', '-an',
-                        mp4Input
-                    ]);
-                    _ffProc.on('close', function(code) {
-                        try { fs.unlinkSync(aviInput); } catch (e) {}
-                        if (code !== 0) { abort('ffmpeg transcode failed (exit ' + code + ')'); return; }
-                        runBlurAndImport(mp4Input);
-                    });
-                } else {
-                    runBlurAndImport(aviInput);
-                }
+                // Pass the lossless AVI directly to blur-cli for both modes.
+                // An ffmpeg AVI→H.264 transcode corrupts dimensions (x264 rounds
+                // height down to a multiple of 16: 1080→1072) and is unnecessary
+                // since the AVI is already lossless and blur-cli reads AVI natively.
+                runBlurAndImport(aviInput);
             });
         });
     }
