@@ -403,6 +403,9 @@ App = (function() {
 
     function runAe() {
         setStatus('Reading composition…');
+        csInterface.evalScript('typeof ae_getActiveComp', function(t) {
+            console.log('typeof ae_getActiveComp:', t);
+        });
         csInterface.evalScript('ae_getActiveComp()', function(result) {
             console.log('ae_getActiveComp result:', result);
             var info;
