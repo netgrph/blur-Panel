@@ -69,11 +69,17 @@ App = (function() {
                 _settings.interpolation_method = 'rife';
             }
 
-            // Load ExtendScript via $.evalFile() so #include directives resolve
-            // relative to the jsx/ folder. Backslashes must be forward-slashed.
-            var jsxFwd = _jsxPath.split('\\').join('/');
-            csInterface.evalScript('$.evalFile("' + jsxFwd + '")', function(r) {
-                if (r && r.indexOf && r.indexOf('EvalScript error') !== -1) {
+            // Read all JSX files in Node.js and evaluate as one combined string.
+            // This avoids #include path-resolution issues entirely.
+            var jsxDir  = path.join(_extRoot, 'jsx');
+            var aeSrc   = fs.readFileSync(path.join(jsxDir, 'ae.jsx'),         'utf8');
+            var prSrc   = fs.readFileSync(path.join(jsxDir, 'pr.jsx'),         'utf8');
+            var hostSrc = fs.readFileSync(path.join(jsxDir, 'hostscript.jsx'), 'utf8')
+                            .replace(/\/\/@include[^\r\n]*/g, '');
+            var allJsx  = aeSrc + '\n' + prSrc + '\n' + hostSrc;
+            csInterface.evalScript(allJsx, function(r) {
+                console.log('JSX loaded, result:', r);
+                if (r && typeof r === 'string' && r.indexOf('Error') !== -1) {
                     _showBanner('ExtendScript load error: ' + r);
                 }
             });
