@@ -315,21 +315,36 @@ App = (function() {
     var _progressRe = /(\d+)\/(\d+)/;
 
     function setStatus(text) {
-        var el = document.getElementById('status-text');
+        var el = document.getElementById('phase-text');
         if (el) el.textContent = text;
+        var bar = document.getElementById('progress-bar');
+        if (bar) bar.classList.add('busy');
         console.log('BlurPanel status:', text);
     }
 
     function setProgress(cur, total) {
-        var pct = total > 0 ? Math.round((cur / total) * 100) : 0;
+        var pct  = total > 0 ? Math.round((cur / total) * 100) : 0;
+        var bar  = document.getElementById('progress-bar');
         var fill = document.getElementById('progress-fill');
+        var ft   = document.getElementById('frame-text');
+        if (bar)  bar.classList.remove('busy');
         if (fill) fill.style.width = pct + '%';
-        setStatus('Frame ' + cur + ' / ' + total + ' (' + pct + '%)');
+        if (ft)   ft.textContent = 'Frame ' + cur + ' / ' + total + ' · ' + pct + '%';
     }
 
     function showProgress(show) {
-        var wrap = document.getElementById('progress-wrap');
-        if (wrap) wrap.classList.toggle('hidden', !show);
+        var wrap  = document.getElementById('progress-wrap');
+        var phase = document.getElementById('phase-text');
+        var bar   = document.getElementById('progress-bar');
+        var fill  = document.getElementById('progress-fill');
+        var ft    = document.getElementById('frame-text');
+        if (wrap)  wrap.classList.toggle('hidden', !show);
+        if (phase) phase.classList.toggle('hidden', !show);
+        if (!show) {
+            if (bar)  bar.classList.remove('busy');
+            if (fill) fill.style.width = '0%';
+            if (ft)   ft.textContent = '';
+        }
     }
 
     function setApplyBusy(busy) {
