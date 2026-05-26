@@ -375,12 +375,14 @@ App = (function() {
         }
         console.log('blur-cli cmd:', _blurCli, '-i', inputPath, '-o', outputPath, '-c', cfgPath);
 
-        // Set cwd to bin/ and inject vapoursynth/ into PATH so blur-cli finds its DLLs.
-        var vsDir  = path.join(_binDir, 'vapoursynth');
+        // Set cwd to bin/ and inject bin/lib/vapoursynth into PATH so blur-cli finds its DLLs.
+        // blur-cli expects the layout: blur-cli.exe at root, everything else under lib/.
+        var libDir = path.join(_binDir, 'lib');
+        var vsDir  = path.join(libDir, 'vapoursynth');
         var spawnEnv = {};
         var k;
         for (k in process.env) { if (process.env.hasOwnProperty(k)) spawnEnv[k] = process.env[k]; }
-        spawnEnv['PATH'] = _binDir + ';' + vsDir + ';' + (process.env['PATH'] || '');
+        spawnEnv['PATH'] = _binDir + ';' + libDir + ';' + vsDir + ';' + (process.env['PATH'] || '');
 
         _blurProc = child_process.spawn(_blurCli, [
             '-i', inputPath,
