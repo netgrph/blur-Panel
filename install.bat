@@ -43,16 +43,17 @@ echo         OK
 
 :: ── 3. Copy panel (including bundled blur-master binaries) to CEP folder ─────
 
-echo  [2/2] Installing panel...
+if exist "%INSTALL_DIR%" (
+    echo  [2/2] Updating existing installation...
+) else (
+    echo  [2/2] Installing panel...
+)
 
 if not exist "%CEP_DIR%" mkdir "%CEP_DIR%"
 
-if exist "%INSTALL_DIR%" (
-    echo         Removing previous install...
-    rmdir /s /q "%INSTALL_DIR%"
-)
-
-robocopy "%PANEL_SRC%" "%INSTALL_DIR%" /e /nfl /ndl /njh /njs >nul 2>&1
+:: /mir  = mirror source to dest (adds new, overwrites changed, removes deleted)
+:: /xd config = skip the config\ folder so saved user settings are preserved
+robocopy "%PANEL_SRC%" "%INSTALL_DIR%" /mir /xd "%PANEL_SRC%\config" /nfl /ndl /njh /njs >nul 2>&1
 if !errorlevel! geq 8 (
     echo  [ERROR] Failed to copy panel files.
     echo          Close After Effects and Premiere Pro, then try again.
