@@ -49,8 +49,12 @@ function ae_preRender(outputPath) {
         var om = rqItem.outputModule(1);
         om.file = new File(outputPath);
         app.project.renderQueue.render();
+        // AE may change the extension to match the output module codec —
+        // read back the actual path it wrote to before removing the item.
+        var actualPath = om.file.fsName;
         rqItem.remove();
-        return '{"success":true}';
+        var safePath = String(actualPath).replace(/\\/g, '/').replace(/"/g, "'");
+        return '{"success":true,"actualPath":"' + safePath + '"}';
     } catch (e) {
         return _ae_err('ae_preRender: ' + e);
     }
