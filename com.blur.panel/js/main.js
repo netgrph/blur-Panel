@@ -367,6 +367,14 @@ App = (function() {
         setStatus('Running blur…');
         setProgress(0, 1);
 
+        try {
+            var inStat = fs.statSync(inputPath);
+            console.log('blur-cli input:', inputPath, 'bytes:', inStat.size);
+        } catch (e) {
+            console.log('blur-cli input stat error:', e.message);
+        }
+        console.log('blur-cli cmd:', _blurCli, '-i', inputPath, '-o', outputPath, '-c', cfgPath);
+
         _blurProc = child_process.spawn(_blurCli, [
             '-i', inputPath,
             '-o', outputPath,
@@ -374,18 +382,37 @@ App = (function() {
         ]);
 
         var stderrBuf = '';
+        var stdoutBuf = '';
+
+        _blurProc.stdout.on('data', function(chunk) {
+            stdoutBuf += chunk.toString();
+            console.log('blur-cli stdout:', chunk.toString());
+        });
 
         _blurProc.stderr.on('data', function(chunk) {
-            stderrBuf += chunk.toString();
+            var s = chunk.toString();
+            stderrBuf += s;
+            console.log('blur-cli stderr:', s);
             var m = _progressRe.exec(stderrBuf);
             if (m) {
                 setProgress(parseInt(m[1], 10), parseInt(m[2], 10));
-                stderrBuf = stderrBuf.slice(-256);
+                stderrBuf = stderrBuf.slice(-512);
             }
         });
 
         _blurProc.on('close', function(code) {
             _blurProc = null;
+            console.log('blur-cli exit code:', code);
+            console.log('blur-cli stdout total:', stdoutBuf);
+
+            // Scan temp dir for anything blur-cli may have created
+            try {
+                var entries = fs.readdirSync(_tempDir);
+                var base = path.basename(outputPath, path.extname(outputPath));
+                var related = entries.filter(function(e) { return e.indexOf(base.slice(0, 20)) !== -1; });
+                console.log('Temp dir entries matching base name:', related);
+            } catch (e) {}
+
             if (code === 0) {
                 onDone(outputPath);
             } else {
