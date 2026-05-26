@@ -260,7 +260,6 @@ input[type="radio"] { cursor: pointer; accent-color: #0070d2; }
     height: 4px;
     background: #333;
     border-radius: 2px;
-    overflow: hidden;
 }
 
 .progress-fill {
@@ -270,10 +269,32 @@ input[type="radio"] { cursor: pointer; accent-color: #0070d2; }
     transition: width 0.3s ease;
 }
 
-.status-text {
+.phase-text {
     font-size: 10px;
     color: #888;
     text-align: center;
+}
+.phase-text.hidden { display: none; }
+
+.frame-text {
+    font-size: 9px;
+    color: #555;
+    text-align: center;
+    min-height: 12px;
+}
+
+@keyframes _blur-shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+.progress-bar.busy {
+    overflow: hidden;
+    position: relative;
+}
+.progress-bar.busy .progress-fill {
+    width: 30% !important;
+    transition: none;
+    animation: _blur-shimmer 1.4s ease-in-out infinite;
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */
