@@ -375,11 +375,21 @@ App = (function() {
         }
         console.log('blur-cli cmd:', _blurCli, '-i', inputPath, '-o', outputPath, '-c', cfgPath);
 
+        // Set cwd to bin/ and inject vapoursynth/ into PATH so blur-cli finds its DLLs.
+        var vsDir  = path.join(_binDir, 'vapoursynth');
+        var spawnEnv = {};
+        var k;
+        for (k in process.env) { if (process.env.hasOwnProperty(k)) spawnEnv[k] = process.env[k]; }
+        spawnEnv['PATH'] = _binDir + ';' + vsDir + ';' + (process.env['PATH'] || '');
+
         _blurProc = child_process.spawn(_blurCli, [
             '-i', inputPath,
             '-o', outputPath,
             '-c', cfgPath
-        ]);
+        ], {
+            cwd: _binDir,
+            env: spawnEnv
+        });
 
         var stderrBuf = '';
         var stdoutBuf = '';
@@ -454,8 +464,12 @@ App = (function() {
                 try { r = JSON.parse(res); } catch (e) { abort('Pre-render response: ' + res); return; }
                 if (r.error) { abort(r.error); return; }
 
+                // AE may have changed the extension — use the actual path it wrote to.
+                var actualInput = (r.actualPath || preRenderOut).split('/').join(path.sep);
+                console.log('Pre-render actual path:', actualInput);
+
                 var cfgPath = writeCfg(info.fps);
-                runBlur(preRenderOut, blurOut, cfgPath, function(blurredPath) {
+                runBlur(actualInput, blurOut, cfgPath, function(blurredPath) {
                     // Verify the blur output file exists before calling ExtendScript
                     if (!fs.existsSync(blurredPath)) {
                         abort('Blur output not found: ' + blurredPath);
