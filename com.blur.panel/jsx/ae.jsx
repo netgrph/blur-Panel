@@ -39,8 +39,10 @@ function ae_getActiveComp() {
     }
 }
 
-// useLossless=true  → apply Verlustfrei/Lossless template (AVI path)
-// useLossless=false → use AE's current H.264 output module settings (MP4 path)
+// useLossless=true  → apply Lossless/Verlustfrei template (AVI)
+// useLossless=false → apply best stock H.264 template, then patch bitrate to 300 Mbps
+//                     on the live OM via setSettings(STRING_SETTABLE). Nothing is saved
+//                     as a template — settings die with the RQ item when we remove it.
 function ae_preRender(outputPath, useLossless) {
     try {
         var item = app.project.activeItem;
@@ -50,19 +52,38 @@ function ae_preRender(outputPath, useLossless) {
         var rqItem = app.project.renderQueue.items.add(item);
         var om = rqItem.outputModule(1);
         var _tplInfo = 'skipped';
+        var _tplList, _ti;
         if (useLossless) {
-            // Template name is locale-specific; $.locale returns OS locale e.g. "de_DE"
-            var _lang    = String($.locale || 'en').substring(0, 2).toLowerCase();
-            var _tplMap  = { de: 'Verlustfrei', fr: 'Sans perte', es: 'Sin perdida',
-                             ja: 'ロスレス', ko: '무손실', zh: '无损' };
-            var _tplPri  = _tplMap[_lang] || 'Lossless';
-            var _tplList = [_tplPri, 'Lossless', 'Verlustfrei'];
-            var _ti;
-            for (_ti = 0; _ti < _tplList.length; _ti++) {
-                try { om.applyTemplate(_tplList[_ti]); _tplInfo = 'ok:' + _tplList[_ti]; break; }
-                catch (e2) { _tplInfo = 'err(' + _tplList[_ti] + '):' + String(e2).substring(0, 80); }
-            }
+            var _lang   = String($.locale || 'en').substring(0, 2).toLowerCase();
+            var _tplMap = { de: 'Verlustfrei', fr: 'Sans perte', es: 'Sin perdida',
+                            ja: 'ロスレス', ko: '무손실', zh: '无损' };
+            _tplList = [_tplMap[_lang] || 'Lossless', 'Lossless', 'Verlustfrei'];
+        } else {
+            _tplList = [
+                'H.264 4K',
+                'H.264 - Match Render Settings - 15 Mbps',
+                'H.264',
+                'H.264 - Low Complexity'
+            ];
         }
+        for (_ti = 0; _ti < _tplList.length; _ti++) {
+            try { om.applyTemplate(_tplList[_ti]); _tplInfo = 'ok:' + _tplList[_ti]; break; }
+            catch (e2) { _tplInfo = 'err(' + _tplList[_ti] + '):' + String(e2).substring(0, 80); }
+        }
+
+        // H.264 path: boost bitrate to 300 Mbps inline on the live OM. Silently no-ops
+        // if AE's settings format doesn't match — render proceeds at base-template bitrate.
+        if (!useLossless) {
+            try {
+                var _s = om.getSettings(OMSettingsFormat.STRING_SETTABLE);
+                if (typeof _s === 'string' && _s.length > 0) {
+                    _s = _s.replace(/(Target Bitrate \[Mbps\])[^\n\r]*/g, '$1: 300');
+                    _s = _s.replace(/(Max Bitrate \[Mbps\])[^\n\r]*/g,    '$1: 300');
+                    try { om.setSettings(OMSettingsFormat.STRING_SETTABLE, _s); } catch (e3) {}
+                }
+            } catch (e4) {}
+        }
+
         om.file = new File(outputPath);
         app.project.renderQueue.render();
         // AE may change the extension to match the output module codec —
