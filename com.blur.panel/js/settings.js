@@ -42,6 +42,11 @@ var Settings = (function() {
         // 'prores' = ProRes 422 HQ (larger, rock-solid AE compat).
         ae_import_format: 'h264_lossless',
 
+        // Cached state of the user-created "Blur Panel HQ" OM template.
+        // 'unknown' on first launch, 'present' / 'missing' after probe or render.
+        // ae_preRender updates this every Apply so it self-heals if user deletes.
+        hq_template_status: 'unknown',
+
         // Filters
         filters:     false,
         brightness:  1.0,

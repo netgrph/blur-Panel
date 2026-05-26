@@ -96,6 +96,16 @@ App = (function() {
             bindUI();
             applySettingsToUI(_settings);
             wireCollapsibles();
+            wireHqModal();
+            updateHqBadge(_settings.hq_template_status || 'unknown');
+
+            // Hide HQ UI on Premiere — it's AE-only
+            if (_appId === 'PPRO') {
+                var hqRow = document.getElementById('hq-template-row');
+                var hqDiv = document.getElementById('hq-divider');
+                if (hqRow) hqRow.style.display = 'none';
+                if (hqDiv) hqDiv.style.display = 'none';
+            }
 
 
         } catch (e) {
@@ -507,6 +517,152 @@ App = (function() {
         });
     }
 
+    // ── HQ template status + setup wizard ────────────────────────────────────
+
+    function updateHqBadge(status) {
+        var badge = document.getElementById('hq-status-badge');
+        if (!badge) return;
+        badge.classList.remove('hq-unknown', 'hq-missing', 'hq-present');
+        if (status === 'present') {
+            badge.textContent = '✓ HQ active';
+            badge.classList.add('hq-present');
+        } else if (status === 'missing') {
+            badge.textContent = '⚠ Using 40 Mbps fallback';
+            badge.classList.add('hq-missing');
+        } else {
+            badge.textContent = 'Not set up';
+            badge.classList.add('hq-unknown');
+        }
+    }
+
+    function setHqStatus(status) {
+        _settings.hq_template_status = status;
+        Settings.save(_settings);
+        updateHqBadge(status);
+    }
+
+    function hqTemplatePath() {
+        return path.join(_extRoot, 'templates', 'Blur Panel HQ.aom');
+    }
+
+    function copyToClipboard(text) {
+        // Windows: pipe text to `clip`. macOS: `pbcopy`. Linux: `xclip`/`xsel`.
+        // We're shipping AE/Pr on Windows + macOS, so handle both.
+        try {
+            var cmd, args;
+            if (process.platform === 'win32') {
+                cmd = 'clip';
+                args = [];
+            } else if (process.platform === 'darwin') {
+                cmd = 'pbcopy';
+                args = [];
+            } else {
+                cmd = 'xclip';
+                args = ['-selection', 'clipboard'];
+            }
+            var p = child_process.spawn(cmd, args, { windowsHide: true });
+            p.stdin.write(text);
+            p.stdin.end();
+            return true;
+        } catch (e) {
+            console.error('BlurPanel: clipboard copy failed —', e.message);
+            return false;
+        }
+    }
+
+    function openHqModal() {
+        var modal = document.getElementById('hq-modal');
+        if (modal) modal.classList.remove('hidden');
+        var s = document.getElementById('hq-modal-status');
+        if (s) { s.textContent = ''; s.className = 'hq-modal-status'; }
+        var pathEl = document.getElementById('hq-path-display');
+        var tpl = hqTemplatePath();
+        if (pathEl) pathEl.textContent = tpl;
+        if (copyToClipboard(tpl)) {
+            setModalStatus('Path copied to clipboard. Ready to paste in AE\'s file dialog.', 'ok');
+        }
+    }
+
+    function closeHqModal() {
+        var modal = document.getElementById('hq-modal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    function setModalStatus(text, kind) {
+        var s = document.getElementById('hq-modal-status');
+        if (!s) return;
+        s.textContent = text || '';
+        s.className = 'hq-modal-status' + (kind ? ' ' + kind : '');
+    }
+
+    function verifyHqTemplate() {
+        setModalStatus('Checking…', '');
+        csInterface.evalScript('ae_hasHqTemplate()', function(res) {
+            var r;
+            try { r = JSON.parse(res); } catch (e) {
+                setModalStatus('Probe failed: ' + res, 'err');
+                return;
+            }
+            if (r.error) { setModalStatus(r.error, 'err'); return; }
+            if (r.present) {
+                setHqStatus('present');
+                setModalStatus('✓ "Blur Panel HQ" template found. You\'re set!', 'ok');
+                setTimeout(closeHqModal, 1500);
+            } else {
+                setHqStatus('missing');
+                var reason = r.reason === 'no comp'
+                    ? 'No composition open in AE — open or create a comp, then click Verify again.'
+                    : 'Template not found yet. Make sure you named it exactly "Blur Panel HQ" and clicked OK.';
+                setModalStatus(reason, 'err');
+            }
+        });
+    }
+
+    function wireHqModal() {
+        var setupBtn = document.getElementById('hq-setup-btn');
+        if (setupBtn) setupBtn.addEventListener('click', openHqModal);
+
+        var closeBtn = document.getElementById('hq-modal-close');
+        if (closeBtn) closeBtn.addEventListener('click', closeHqModal);
+
+        var openEditor = document.getElementById('hq-open-editor');
+        if (openEditor) openEditor.addEventListener('click', function() {
+            // Re-copy in case the user copied something else after the modal opened
+            copyToClipboard(hqTemplatePath());
+            setModalStatus('Opening Output Module Templates dialog in AE…', 'ok');
+            csInterface.evalScript('ae_openOMTemplateEditor()', function(res) {
+                var r;
+                try { r = JSON.parse(res); } catch (e) {
+                    setModalStatus('Could not open editor. Open it manually in AE: Edit → Templates → Output Module… (path is on your clipboard).', 'err');
+                    return;
+                }
+                if (r.error) {
+                    setModalStatus('Could not open editor: ' + r.error + ' — open manually via Edit → Templates → Output Module…', 'err');
+                } else {
+                    setModalStatus('Switch to AE — if the dialog isn\'t visible, open it via Edit → Templates → Output Module… Then click Load… and press Ctrl+V → Enter → OK.', 'ok');
+                }
+            });
+        });
+
+        var copyBtn = document.getElementById('hq-copy-path');
+        if (copyBtn) copyBtn.addEventListener('click', function() {
+            if (copyToClipboard(hqTemplatePath())) {
+                setModalStatus('Path copied to clipboard.', 'ok');
+            } else {
+                setModalStatus('Couldn\'t access clipboard — select the path above and copy manually.', 'err');
+            }
+        });
+
+        var verifyBtn = document.getElementById('hq-verify');
+        if (verifyBtn) verifyBtn.addEventListener('click', verifyHqTemplate);
+
+        // Dismiss modal by clicking the backdrop
+        var modal = document.getElementById('hq-modal');
+        if (modal) modal.addEventListener('click', function(ev) {
+            if (ev.target === modal) closeHqModal();
+        });
+    }
+
     // ── After Effects flow ────────────────────────────────────────────────────
 
     function runAe() {
@@ -532,7 +688,8 @@ App = (function() {
                 if (r.error) { abort(r.error); return; }
 
                 console.log('BlurPanel pre-render: template=' + r.tpl
-                          + ' bitrate=' + JSON.stringify(r.bitrate));
+                          + ' hasHqTemplate=' + r.hasHqTemplate);
+                setHqStatus(r.hasHqTemplate ? 'present' : 'missing');
 
                 var mp4Input = (r.actualPath || mp4RenderOut).split('/').join(path.sep);
 
