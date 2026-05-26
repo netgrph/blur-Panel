@@ -138,14 +138,6 @@
         </div>
       </div>
 
-      <div class="row">
-        <label>Pre-render</label>
-        <div class="radio-group">
-          <label><input type="radio" name="prerender_format" value="avi" checked> AVI</label>
-          <label><input type="radio" name="prerender_format" value="mp4"> MP4</label>
-        </div>
-      </div>
-
       <div class="divider"></div>
 
       <div class="row">
@@ -170,6 +162,16 @@
           <input type="checkbox" id="gpu_encoding">
           <span class="track"></span>
         </label>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row" id="ae-import-row">
+        <label>AE re-import</label>
+        <select id="ae_import_format">
+          <option value="h264_lossless">Lossless H.264 (smaller)</option>
+          <option value="prores">ProRes 422 HQ (largest)</option>
+        </select>
       </div>
 
     </div>

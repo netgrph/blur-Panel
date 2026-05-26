@@ -48,6 +48,16 @@ App = (function() {
     var _jsxPath  = path.join(_extRoot, 'jsx', 'hostscript.jsx');
     var _tempDir  = os.tmpdir();
 
+    // ffmpeg lives in bin/lib/ffmpeg/ (installer layout) or bin/ffmpeg/ (flat).
+    function _findFfmpeg() {
+        var exe = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+        var p1  = path.join(_binDir, 'lib', 'ffmpeg', exe);
+        var p2  = path.join(_binDir, 'ffmpeg', exe);
+        if (fs.existsSync(p1)) return p1;
+        if (fs.existsSync(p2)) return p2;
+        return null;
+    }
+
     // ── Initialisation ────────────────────────────────────────────────────────
 
     function init() {
@@ -126,6 +136,7 @@ App = (function() {
             'deduplicate', 'deduplicate_method',
             'pre_interpolate', 'pre_interpolated_fps',
             'encode_preset', 'gpu_decoding', 'gpu_interpolation', 'gpu_encoding',
+            'ae_import_format',
             'filters'
         ];
         plain.forEach(function(id) {
@@ -174,6 +185,7 @@ App = (function() {
         setVal('gpu_decoding',      s.gpu_decoding);
         setVal('gpu_interpolation', s.gpu_interpolation);
         setVal('gpu_encoding',      s.gpu_encoding);
+        setVal('ae_import_format',  s.ae_import_format);
 
         setVal('filters',       s.filters);
         setVal('brightness',    s.brightness);
@@ -216,6 +228,7 @@ App = (function() {
         _settings.gpu_decoding      = getVal('gpu_decoding');
         _settings.gpu_interpolation = getVal('gpu_interpolation');
         _settings.gpu_encoding      = getVal('gpu_encoding');
+        _settings.ae_import_format  = getVal('ae_import_format');
 
         _settings.filters    = getVal('filters');
         _settings.brightness = parseFloat(getVal('brightness'));
@@ -442,6 +455,58 @@ App = (function() {
         });
     }
 
+    // ── AE re-import transcode ────────────────────────────────────────────────
+    // AE's H.264 decoder corrupts on replay when frames depend on a distant
+    // keyframe (default GOP=250). Transcoding to all-intra H.264 or ProRes
+    // before import sidesteps the issue. blur-cli's output is the source.
+
+    function transcodeForAe(inputPath, baseStem, onDone) {
+        var ffmpeg = _findFfmpeg();
+        if (!ffmpeg) {
+            // No ffmpeg — fall through to direct import. Replay corruption may occur.
+            console.warn('BlurPanel: ffmpeg not found; importing blur output directly.');
+            onDone(inputPath);
+            return;
+        }
+
+        var fmt    = _settings.ae_import_format || 'h264_lossless';
+        var stamp  = Date.now();
+        var outExt, args;
+        if (fmt === 'prores') {
+            outExt = '.mov';
+            args   = ['-y', '-i', inputPath,
+                      '-c:v', 'prores_ks', '-profile:v', '3',
+                      '-vendor', 'apl0', '-pix_fmt', 'yuv422p10le',
+                      '-qscale:v', '9', '-an'];
+        } else {
+            outExt = '.mp4';
+            args   = ['-y', '-i', inputPath,
+                      '-c:v', 'libx264', '-preset', 'ultrafast',
+                      '-crf', '0', '-g', '1', '-keyint_min', '1', '-an'];
+        }
+        var outputPath = path.join(_tempDir, baseStem + '_ae_' + stamp + outExt);
+        args.push(outputPath);
+
+        setStatus('Re-encoding for AE…');
+        var proc = child_process.spawn(ffmpeg, args);
+        var stderr = '';
+        proc.stderr.on('data', function(b) { stderr += b.toString(); });
+        proc.on('close', function(code) {
+            if (code === 0 && fs.existsSync(outputPath)) {
+                onDone(outputPath);
+            } else {
+                console.warn('BlurPanel: ffmpeg transcode failed (code ' + code +
+                             '). Falling back to direct import. stderr:\n' + stderr.slice(-400));
+                onDone(inputPath);
+            }
+        });
+        proc.on('error', function(err) {
+            console.warn('BlurPanel: ffmpeg spawn error: ' + err.message +
+                         '. Falling back to direct import.');
+            onDone(inputPath);
+        });
+    }
+
     // ── After Effects flow ────────────────────────────────────────────────────
 
     function runAe() {
@@ -477,13 +542,19 @@ App = (function() {
                         abort('Blur output not found: ' + blurredPath);
                         return;
                     }
-                    setStatus('Importing result…');
-                    csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(blurredPath) + ')', function(ir) {
-                        var irObj;
-                        try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
-                        if (irObj.error) { abort(irObj.error); return; }
-                        finish('Done — blurred layer added.');
-                        try { fs.unlinkSync(mp4RenderOut); } catch (e) {}
+                    transcodeForAe(blurredPath, baseName, function(importPath) {
+                        setStatus('Importing result…');
+                        csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(importPath) + ')', function(ir) {
+                            var irObj;
+                            try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
+                            if (irObj.error) { abort(irObj.error); return; }
+                            finish('Done — blurred layer added.');
+                            try { fs.unlinkSync(mp4RenderOut); } catch (e) {}
+                            // If we transcoded, delete blur-cli's intermediate output.
+                            if (importPath !== blurredPath) {
+                                try { fs.unlinkSync(blurredPath); } catch (e) {}
+                            }
+                        });
                     });
                 });
             });

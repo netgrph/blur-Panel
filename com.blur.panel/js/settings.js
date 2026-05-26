@@ -31,12 +31,16 @@ var Settings = (function() {
         pre_interpolated_fps: 360,
 
         // Output
-        prerender_format: 'avi',
         encode_preset:    'h264',
         quality:          16,
         gpu_decoding:     true,
         gpu_interpolation: true,
         gpu_encoding:     false,
+
+        // AE re-import transcode (prevents AE H.264 decoder cache corruption on
+        // replay). 'h264_lossless' = libx264 -crf 0 -g 1 (smaller, fast).
+        // 'prores' = ProRes 422 HQ (larger, rock-solid AE compat).
+        ae_import_format: 'h264_lossless',
 
         // Filters
         filters:     false,
