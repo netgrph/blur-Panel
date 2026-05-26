@@ -375,10 +375,14 @@ App = (function() {
         }
         console.log('blur-cli cmd:', _blurCli, '-i', inputPath, '-o', outputPath, '-c', cfgPath);
 
-        // Set cwd to bin/ and inject bin/lib/vapoursynth into PATH so blur-cli finds its DLLs.
-        // blur-cli expects the layout: blur-cli.exe at root, everything else under lib/.
-        var libDir = path.join(_binDir, 'lib');
-        var vsDir  = path.join(libDir, 'vapoursynth');
+        // Set cwd to bin/ and inject vapoursynth dir into PATH.
+        // Support two layouts:
+        //   installer layout: blur-cli.exe + lib/vapoursynth/vspipe.exe  (preferred)
+        //   flat layout:      blur-cli.exe + vapoursynth/vspipe.exe      (fallback)
+        var libDir     = path.join(_binDir, 'lib');
+        var vsInstaller = path.join(libDir, 'vapoursynth');   // installer layout
+        var vsFlat      = path.join(_binDir, 'vapoursynth');  // flat layout
+        var vsDir = fs.existsSync(vsInstaller) ? vsInstaller : vsFlat;
         var spawnEnv = {};
         var k;
         for (k in process.env) { if (process.env.hasOwnProperty(k)) spawnEnv[k] = process.env[k]; }
