@@ -1,1 +1,0 @@
-.\7-Zip-Zstandard\7z.exe x -m0=zstd -mx1  ae25.2_20.64bit.AfterEffectsSDK.zstd.zip -o.
