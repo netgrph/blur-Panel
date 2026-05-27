@@ -1,6 +1,10 @@
-# Compiled blur-master binaries — copied into com.blur.panel/bin/ at release
-# build time. Tracked in their own source repo, not here. ~460 MB.
-knowledgebase/blur/
+# Reference material kept locally for development but not shipped in the
+# public repo — Adobe SDKs, scripting guides, the wrapped tool's source,
+# and the compiled blur-master binaries.
+knowledgebase/
+
+# Personal/planning markdowns not relevant to a public repo.
+*goal*.md
 
 # Per-user runtime settings written by the panel at runtime.
 com.blur.panel/config/user-settings.json
