@@ -44,9 +44,9 @@ echo         OK
 :: ── 3. Copy panel (including bundled blur-master binaries) to CEP folder ─────
 
 if exist "%INSTALL_DIR%" (
-    echo  [2/3] Updating existing installation...
+    echo  [2/4] Updating existing installation...
 ) else (
-    echo  [2/3] Installing panel...
+    echo  [2/4] Installing panel...
 )
 
 if not exist "%CEP_DIR%" mkdir "%CEP_DIR%"
@@ -63,12 +63,52 @@ if !errorlevel! geq 8 (
 
 echo         OK  ^>  %INSTALL_DIR%
 
-:: ── 4. Remove any previously-installed AE startup script ─────────────────────
+:: ── 4. Unpack bundled ffmpeg archives ────────────────────────────────────────
+::      ffmpeg binaries are shipped as ffmpeg.7z in both bin\ffmpeg\ and
+::      bin\lib\ffmpeg\ to keep the GitHub repo under file-size limits.
+::      Extract them in place using the bundled 7z.exe from bin\vapoursynth\.
+::      Re-extracted on every run because robocopy /mir would otherwise wipe
+::      the extracted files on the next update.
+
+echo  [3/4] Unpacking ffmpeg binaries...
+
+set "SEVENZ=%INSTALL_DIR%\bin\vapoursynth\7z.exe"
+
+if not exist "%SEVENZ%" (
+    echo  [ERROR] 7z.exe not found at bin\vapoursynth\7z.exe
+    echo.
+    pause & exit /b 1
+)
+
+set "FFMPEG_ARCHIVE_1=%INSTALL_DIR%\bin\ffmpeg\ffmpeg.7z"
+set "FFMPEG_ARCHIVE_2=%INSTALL_DIR%\bin\lib\ffmpeg\ffmpeg.7z"
+
+if exist "%FFMPEG_ARCHIVE_1%" (
+    "%SEVENZ%" x -y -o"%INSTALL_DIR%\bin\ffmpeg" "%FFMPEG_ARCHIVE_1%" >nul
+    if !errorlevel! neq 0 (
+        echo  [ERROR] Failed to extract bin\ffmpeg\ffmpeg.7z
+        echo.
+        pause & exit /b 1
+    )
+)
+
+if exist "%FFMPEG_ARCHIVE_2%" (
+    "%SEVENZ%" x -y -o"%INSTALL_DIR%\bin\lib\ffmpeg" "%FFMPEG_ARCHIVE_2%" >nul
+    if !errorlevel! neq 0 (
+        echo  [ERROR] Failed to extract bin\lib\ffmpeg\ffmpeg.7z
+        echo.
+        pause & exit /b 1
+    )
+)
+
+echo         OK
+
+:: ── 5. Remove any previously-installed AE startup script ─────────────────────
 ::      (older installer versions copied blur_panel_template.jsx into every AE
 ::       Scripts\Startup folder. The panel now patches the OM inline at render
 ::       time, so the startup script is obsolete — clean it up.)
 
-echo  [3/3] Cleaning up legacy AE startup script...
+echo  [4/4] Cleaning up legacy AE startup script...
 
 set "AE_APPDATA=%APPDATA%\Adobe\After Effects"
 set "REMOVE_COUNT=0"
