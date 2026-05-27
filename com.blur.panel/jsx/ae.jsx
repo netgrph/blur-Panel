@@ -88,13 +88,24 @@ function ae_preRender(outputPath, useLossless) {
                 nm = String(availTpls[i]);
                 lc = nm.toLowerCase();
                 if (useLossless) {
-                    if (lc.indexOf('lossless')     !== -1 ||
-                        lc.indexOf('verlustfrei')  !== -1 ||
-                        lc.indexOf('sans perte')   !== -1 ||
-                        lc.indexOf('sin perdida')  !== -1 ||
-                        nm.indexOf('ロスレス')      !== -1 ||
-                        nm.indexOf('무손실')         !== -1 ||
-                        nm.indexOf('无损')          !== -1) {
+                    if (lc.indexOf('lossless')        !== -1 ||  // English
+                        lc.indexOf('verlustfrei')     !== -1 ||  // German
+                        lc.indexOf('sans perte')      !== -1 ||  // French
+                        lc.indexOf('senza perdita')   !== -1 ||  // Italian
+                        lc.indexOf('sin perdida')     !== -1 ||  // Spanish (sin pérdida — diacritic stripped by toLowerCase below isn't reliable; match both)
+                        lc.indexOf('sin pérdida')     !== -1 ||  // Spanish (with diacritic)
+                        lc.indexOf('sem perdas')      !== -1 ||  // Portuguese
+                        lc.indexOf('bezstratny')      !== -1 ||  // Polish (bezstratny / bezstratna)
+                        lc.indexOf('bezztrátový')     !== -1 ||  // Czech
+                        lc.indexOf('bezztratovy')     !== -1 ||  // Czech (diacritic-less variant)
+                        lc.indexOf('kayipsiz')        !== -1 ||  // Turkish (diacritic-less)
+                        lc.indexOf('kayıpsız')        !== -1 ||  // Turkish
+                        nm.indexOf('без потерь')      !== -1 ||  // Russian
+                        nm.indexOf('ロスレス')         !== -1 ||  // Japanese
+                        nm.indexOf('무손실')           !== -1 ||  // Korean
+                        nm.indexOf('无损')             !== -1 ||  // Chinese (Simplified)
+                        nm.indexOf('無損')             !== -1 ||  // Chinese (Traditional)
+                        nm.indexOf('無失真')           !== -1) {  // Chinese (Traditional, alt term)
                         tplList.push(nm);
                     }
                 } else {
@@ -180,18 +191,23 @@ function ae_openOMTemplateEditor() {
     try {
         // Bring AE to the foreground so the dialog isn't hidden behind the panel.
         try { app.activate(); } catch (eAct) {}
+        // Adobe AE ships in these locales; labels below match the dialog
+        // entry "Edit > Templates > Output Module..." in each. Numeric-ID
+        // fallback below catches any locale we miss.
         var labels = [
             'Output Module...',         // English
             'Ausgabemodul...',          // German
             'Module de sortie...',      // French
             'Modulo di output...',      // Italian
             'Módulo de salida...',      // Spanish
-            'Módulo de saída...',       // Portuguese
+            'Módulo de saída...',       // Portuguese (Brazil)
             'Moduł wyjściowy...',       // Polish
+            'Výstupní modul...',        // Czech
+            'Çıktı Modülü...',          // Turkish
             'Модуль вывода...',         // Russian
             '出力モジュール...',         // Japanese
-            '输出模块...',                // Simplified Chinese
-            '輸出模組...',                // Traditional Chinese
+            '输出模块...',                // Chinese (Simplified)
+            '輸出模組...',                // Chinese (Traditional)
             '출력 모듈...'                // Korean
         ];
         var i, cid;
