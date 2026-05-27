@@ -1,8 +1,0 @@
-# don't include dependencies in language statistics
-dependencies/* linguist-vendored
-
-# or resources
-resources/* linguist-vendored
-
-# .h files in blur are c++, not c
-*.h linguist-language=C++
