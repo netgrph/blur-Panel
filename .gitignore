@@ -8,3 +8,7 @@ knowledgebase/
 
 # Per-user runtime settings written by the panel at runtime.
 com.blur.panel/config/user-settings.json
+
+.vs/
+CLAUDE.md
+BUILD-GUIDE.md
