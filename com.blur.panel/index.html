@@ -164,7 +164,7 @@
         </label>
       </div>
 
-      <div class="divider"></div>
+      <div class="divider" id="ae-import-divider"></div>
 
       <div class="row" id="ae-import-row">
         <label>AE re-import</label>
@@ -192,6 +192,7 @@
     <div class="card-header" data-toggle="filters-body">
       <span class="arrow" id="arrow-filters">▶</span>
       <span>Filters</span>
+      <span id="host-label" class="host-label">—</span>
     </div>
     <div class="card-body hidden" id="filters-body">
 
@@ -232,7 +233,6 @@
 
   <!-- ── ACTION ─────────────────────────────────────────────── -->
   <div class="action-area">
-    <div id="host-label" class="host-label">—</div>
     <button id="apply-btn" class="btn-apply" onclick="App.apply()">Apply</button>
     <div id="phase-text" class="phase-text hidden"></div>
     <div id="progress-wrap" class="progress-wrap hidden">

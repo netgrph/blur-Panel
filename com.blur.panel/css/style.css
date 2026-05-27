@@ -214,6 +214,9 @@ input[type="radio"] { cursor: pointer; accent-color: #0070d2; }
 
 .action-area {
     margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
     padding: 10px;
     background: #1a1a1a;
     border-top: 1px solid #111;
@@ -223,10 +226,11 @@ input[type="radio"] { cursor: pointer; accent-color: #0070d2; }
 }
 
 .host-label {
-    font-size: 10px;
-    color: #666;
-    text-align: center;
-    letter-spacing: 0.05em;
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 400;
+    color: #555;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
