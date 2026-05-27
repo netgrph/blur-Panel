@@ -24,24 +24,33 @@ function pr_getActiveSequence() {
     }
 }
 
-function pr_exportSequence(outputPath) {
+function pr_exportSequence(outputPath, presetPath) {
     try {
         var seq = app.project.activeSequence;
         if (!seq) {
             return _pr_err('No sequence is active.');
         }
-        var jobID = app.encoder.encodeSequence(
-            seq,
-            outputPath,
-            '',
-            app.encoder.ENCODE_ENTIRE,
-            true
-        );
-        if (jobID === '0') {
-            return _pr_err('AME failed to queue the export. Make sure Adobe Media Encoder is installed.');
+        if (typeof seq.exportAsMediaDirect !== 'function') {
+            return _pr_err('Sequence.exportAsMediaDirect is not available in this Premiere Pro version.');
         }
-        app.encoder.startBatch();
-        return '{"success":true,"jobID":"' + _pr_esc(jobID) + '"}';
+        var preset = presetPath ? presetPath : '';
+        var ok;
+        try {
+            ok = seq.exportAsMediaDirect(outputPath, preset, 0);
+        } catch (innerE) {
+            return _pr_err('exportAsMediaDirect threw: ' + innerE +
+                (preset ? '' : ' (called with empty preset — a .epr preset file is likely required)'));
+        }
+        // exportAsMediaDirect doesn't return a JS boolean despite the docs — it returns Pr's
+        // EncoderHost.Error object. Its .toString() is "No Error" on success, or a real error
+        // message on failure (e.g. "Preset file doesn't exist").
+        var okStr = String(ok);
+        var success = (ok === true) || (okStr === 'No Error') || (okStr === 'true');
+        if (!success) {
+            return _pr_err('exportAsMediaDirect failed: ' + okStr +
+                (preset ? ' (preset: "' + preset + '")' : ' (empty preset not accepted — a .epr preset file is likely required)'));
+        }
+        return '{"success":true,"outputPath":"' + _pr_esc(outputPath) + '"}';
     } catch (e) {
         return _pr_err('pr_exportSequence: ' + e);
     }
@@ -73,8 +82,27 @@ function pr_importToSequence(filePath) {
         if (!clip) {
             clip = root.children[root.children.numItems - 1];
         }
-        seq.videoTracks[0].insertClip(clip, 0);
-        return '{"success":true}';
+
+        // Find the lowest empty video track (V1, V2, V3, …) so the blurred
+        // clip lands on its own layer on top of existing footage instead of
+        // pushing/appending. overwriteClip is used (rather than insertClip)
+        // to avoid shifting timeline content even if a track is unexpectedly
+        // non-empty. Time is in ticks as a string per the Pr scripting docs.
+        var tracks = seq.videoTracks;
+        var n = tracks.numTracks;
+        var targetIdx = -1;
+        for (i = 0; i < n; i++) {
+            if (tracks[i].clips.numItems === 0) {
+                targetIdx = i;
+                break;
+            }
+        }
+        if (targetIdx === -1) {
+            return _pr_err('All ' + n + ' video tracks are occupied. Add an empty video track above the topmost one and try again.');
+        }
+
+        tracks[targetIdx].overwriteClip(clip, '0');
+        return '{"success":true,"trackIndex":' + targetIdx + '}';
     } catch (e) {
         return _pr_err('pr_importToSequence: ' + e);
     }

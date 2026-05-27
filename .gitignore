@@ -12,3 +12,7 @@ com.blur.panel/config/user-settings.json
 .vs/
 CLAUDE.md
 BUILD-GUIDE.md
+
+# Hand-built SVG mockups of the panel UI for use in motion graphics work.
+# Local-only — not shipped or referenced by the panel.
+ui-svg-export/

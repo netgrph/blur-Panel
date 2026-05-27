@@ -99,12 +99,13 @@ App = (function() {
             wireHqModal();
             updateHqBadge(_settings.hq_template_status || 'unknown');
 
-            // Hide HQ UI on Premiere — it's AE-only
+            // Hide AE-only UI on Premiere (HQ template + AE re-import format dropdown)
             if (_appId === 'PPRO') {
-                var hqRow = document.getElementById('hq-template-row');
-                var hqDiv = document.getElementById('hq-divider');
-                if (hqRow) hqRow.style.display = 'none';
-                if (hqDiv) hqDiv.style.display = 'none';
+                var aeOnlyIds = ['hq-template-row', 'hq-divider', 'ae-import-row', 'ae-import-divider'];
+                for (var k = 0; k < aeOnlyIds.length; k++) {
+                    var el = document.getElementById(aeOnlyIds[k]);
+                    if (el) el.style.display = 'none';
+                }
             }
 
 
@@ -734,40 +735,46 @@ App = (function() {
             var exportOut = path.join(_tempDir, baseName + '_prerender.mp4');
             var blurOut   = path.join(_tempDir, baseName + '_blur.mp4');
 
-            setStatus('Exporting "' + info.name + '" via AME…');
+            // Pr's exportAsMediaDirect requires a real .epr preset — empty string is rejected.
+            // We ship one in the extension bundle so no per-user setup is needed.
+            var prPresetPath = path.join(_extRoot, 'templates', 'Blur Panel Pr HQ.epr');
+            if (!fs.existsSync(prPresetPath)) {
+                abort('Missing Premiere export preset: ' + prPresetPath +
+                      ' — create one via File → Export → Media (Ctrl+M), Save Preset, ' +
+                      'and place it at templates/Blur Panel Pr HQ.epr in the extension folder.');
+                return;
+            }
 
-            csInterface.evalScript('pr_exportSequence(' + JSON.stringify(exportOut) + ')', function(res) {
+            setStatus('Exporting "' + info.name + '" from Premiere…');
+
+            // exportAsMediaDirect is synchronous: it blocks until the file is written,
+            // then returns true/false. No polling, no AME dependency.
+            csInterface.evalScript('pr_exportSequence(' + JSON.stringify(exportOut) + ',' + JSON.stringify(prPresetPath) + ')', function(res) {
                 var r;
                 try { r = JSON.parse(res); } catch (e) { abort('Export response: ' + res); return; }
                 if (r.error) { abort(r.error); return; }
 
-                var elapsed = 0;
-                var timeout = 3600000;
-                _pollTimer = setInterval(function() {
-                    elapsed += 2000;
-                    if (fs.existsSync(exportOut)) {
-                        clearInterval(_pollTimer);
-                        _pollTimer = null;
+                var actualPath = r.outputPath || exportOut;
+                if (!fs.existsSync(actualPath)) {
+                    abort('Export reported success but output file is missing: ' + actualPath);
+                    return;
+                }
 
-                        var cfgPath = writeCfg(info.fps);
-                        runBlur(exportOut, blurOut, cfgPath, function(blurredPath) {
-                            fixDimensions(blurredPath, info.width, info.height, function(finalPath) {
-                                setStatus('Importing result…');
-                                csInterface.evalScript('pr_importToSequence(' + JSON.stringify(finalPath) + ')', function(ir) {
-                                    var irObj;
-                                    try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
-                                    if (irObj.error) { abort(irObj.error); return; }
-                                    finish('Done — blurred clip added.');
-                                    try { fs.unlinkSync(exportOut); } catch (e) {}
-                                });
-                            });
-                        });
-                    } else if (elapsed >= timeout) {
-                        clearInterval(_pollTimer);
-                        _pollTimer = null;
-                        abort('AME export timed out after 1 hour.');
+                var cfgPath = writeCfg(info.fps);
+                runBlur(actualPath, blurOut, cfgPath, function(blurredPath) {
+                    if (!fs.existsSync(blurredPath)) {
+                        abort('Blur output not found: ' + blurredPath);
+                        return;
                     }
-                }, 2000);
+                    setStatus('Importing result…');
+                    csInterface.evalScript('pr_importToSequence(' + JSON.stringify(blurredPath) + ')', function(ir) {
+                        var irObj;
+                        try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
+                        if (irObj.error) { abort(irObj.error); return; }
+                        finish('Done — blurred clip added.');
+                        try { fs.unlinkSync(actualPath); } catch (e) {}
+                    });
+                });
             });
         });
     }
