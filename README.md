@@ -6,6 +6,10 @@ Configure your blur and interpolation settings in the panel, hit **Apply**, and 
 
 > The panel is a UI front-end for blur-master — all blur and interpolation work is done by blur-master itself.
 
+<p align="center">
+  <img src="UI.png" alt="Blur Panel UI" width="380">
+</p>
+
 ---
 
 ## Compatibility
