@@ -106,3 +106,9 @@ The `bin/` folder ships every blur-master dependency required to run, so the pan
 ## License
 
 See [blur-master](https://github.com/f0e/blur) for the licensing terms of the bundled blur binaries. The panel code itself is provided as-is.
+
+---
+
+## Disclaimer
+
+Almost this entire project was vibecoded with AI assistance. I do not take credit in any way for creating it.
