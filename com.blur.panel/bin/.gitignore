@@ -1,5 +1,1 @@
-# Ignore all bundled binaries — these are large and distributed separately.
-# Only keep the README and the gitignore itself.
-*
-!.gitignore
-!README.txt
+README.txt
