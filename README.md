@@ -11,7 +11,7 @@ Configure your blur and interpolation settings in the panel, hit **Apply**, and 
 </p>
 
 <p align="center">
-  <video src="https://github.com/netgrph/blur-Panel/releases/download/demo-assets/Komp.1_2026-05-28_02-42.webm" controls width="720"></video>
+  <img src="Komp%201_2026-05-28_02-42.gif" alt="Install + usage demo" width="720">
 </p>
 
 ---
