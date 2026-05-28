@@ -111,4 +111,4 @@ See [f0e/blur](https://github.com/f0e/blur) for the licensing terms of the bundl
 
 ## Disclaimer
 
-Almost this entire project was vibecoded with AI assistance. I do not take credit in any way for creating it.
+Almost this entire project was created with AI assistance. I do not take credit in any way for creating it.
