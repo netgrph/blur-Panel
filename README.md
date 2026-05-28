@@ -58,6 +58,8 @@ The panel will:
 
 All settings persist between sessions.
 
+---
+
 ### Output location
 
 Pre-rendered and blurred files are written to a **`BlurPanel/` subfolder next to your project file** (`.aep` / `.prproj`). If the project hasn't been saved yet, output falls back to a **`BlurPanel/` folder inside your Videos folder** (`Movies` on macOS), and the panel shows a one-time confirmation before continuing.
@@ -83,7 +85,6 @@ Pr exports run directly from Premiere using a bundled high-bitrate H.264 preset.
 ## Credits
 
 - Built on top of [blur-master](https://github.com/f0e/blur) by f0e. All credit for the underlying motion blur and interpolation work belongs to that project.
-- Uses Adobe's CEP (Common Extensibility Platform).
 
 ---
 
