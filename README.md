@@ -58,6 +58,10 @@ The panel will:
 
 All settings persist between sessions.
 
+### Output location
+
+Pre-rendered and blurred files are written to a **`BlurPanel/` subfolder next to your project file** (`.aep` / `.prproj`). If the project hasn't been saved yet, output falls back to a **`BlurPanel/` folder inside your Videos folder** (`Movies` on macOS), and the panel shows a one-time confirmation before continuing.
+
 ### After Effects: high-bitrate output
 
 By default AE pre-renders at ~40 Mbps using its stock H.264 template. For higher-quality intermediates, use the panel's **Setup HQ template** button — it opens AE's Output Module Templates dialog and copies the bundled `Blur Panel HQ.aom` path to your clipboard. Press **Load…**, paste, **Enter**, then **OK**. The Output card will show a green **HQ active** badge once the template is detected.
