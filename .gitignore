@@ -13,6 +13,13 @@ com.blur.panel/config/user-settings.json
 CLAUDE.md
 BUILD-GUIDE.md
 
+# Python bytecode caches — these get regenerated locally when the bundled
+# blur Python modules first run, and the .pyc files embed the absolute
+# source path from the build machine (a PII leak).
+__pycache__/
+*.pyc
+*.pyo
+
 # Hand-built SVG mockups of the panel UI for use in motion graphics work.
 # Local-only — not shipped or referenced by the panel.
 ui-svg-export/
