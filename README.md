@@ -1,10 +1,10 @@
 # Blur Panel
 
-A dockable CEP panel for **Adobe After Effects** and **Adobe Premiere Pro** that wraps the [blur-master](https://github.com/f0e/blur) motion blur / frame interpolation tool.
+A dockable CEP panel for **Adobe After Effects** and **Adobe Premiere Pro** that wraps the [f0e/blur](https://github.com/f0e/blur) motion blur / frame interpolation tool.
 
 Configure your blur and interpolation settings in the panel, hit **Apply**, and the panel pre-renders the active composition or sequence, runs it through blur-master with your settings, and imports the processed result back as the top layer.
 
-> The panel is a UI front-end for blur-master — all blur and interpolation work is done by blur-master itself.
+> The panel is a UI front-end for f0e/blur — all blur and interpolation work is done by f0e/blur itself.
 
 <p align="center">
   <img src="Komp%201_2026-05-28_03-51.gif" alt="Install + usage demo" width="720">
@@ -33,7 +33,7 @@ Configure your blur and interpolation settings in the panel, hit **Apply**, and 
 
 Saved user settings in `com.blur.panel/config/user-settings.json` are preserved on re-install.
 
-### Manual install (fallback)
+### Manual install
 
 If `install.bat` cannot be run:
 
@@ -64,7 +64,7 @@ By default AE pre-renders at ~40 Mbps using its stock H.264 template. For higher
 
 ### Premiere Pro
 
-Pr exports run directly from Premiere using a bundled high-bitrate H.264 preset. The blurred clip lands on the lowest empty video track.
+Pr exports run directly from Premiere using a bundled high-bitrate H.264 preset.
 
 ---
 
@@ -105,7 +105,7 @@ The `bin/` folder ships every blur-master dependency required to run, so the pan
 
 ## License
 
-See [blur-master](https://github.com/f0e/blur) for the licensing terms of the bundled blur binaries. The panel code itself is provided as-is.
+See [f0e/blur](https://github.com/f0e/blur) for the licensing terms of the bundled blur binaries. The panel code itself is provided as-is.
 
 ---
 
