@@ -10,6 +10,10 @@ Configure your blur and interpolation settings in the panel, hit **Apply**, and 
   <img src="UI.png" alt="Blur Panel UI" width="380">
 </p>
 
+<p align="center">
+  <video src="Komp%201_2026-05-28_02-42_1440p.webm" controls width="720"></video>
+</p>
+
 ---
 
 ## Compatibility
