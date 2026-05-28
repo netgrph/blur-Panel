@@ -72,26 +72,6 @@ Pr exports run directly from Premiere using a bundled high-bitrate H.264 preset.
 
 ---
 
-## What's included
-
-```
-com.blur.panel/             ← the CEP panel (drops into Adobe's CEP folder)
-├── CSXS/manifest.xml
-├── index.html
-├── css/, js/, jsx/         ← UI, host bridge, ExtendScript
-├── templates/              ← bundled "Blur Panel HQ.aom" template
-├── config/                 ← per-user settings (written at runtime)
-└── bin/                    ← blur-cli.exe + blur.py + ffmpeg + vapoursynth
-install.bat                 ← one-step installer (Windows)
-_enable_debug_mode.reg      ← manual registry helper
-```
-
-The `bin/` folder ships every blur-master dependency required to run, so the panel is self-contained — no extra installs needed.
-
-> **Note:** `ffmpeg.exe` and `ffprobe.exe` are shipped packed inside `ffmpeg.7z` archives (they exceed GitHub's 100 MB per-file limit). `install.bat` unpacks them automatically at install time.
-
----
-
 ## Troubleshooting
 
 - **Panel doesn't appear under Window → Extensions:** Make sure you restarted the host app after install. If the menu entry is missing entirely, the `PlayerDebugMode` registry keys were not applied — re-run `install.bat` or double-click `_enable_debug_mode.reg`.
