@@ -64,7 +64,7 @@ By default AE pre-renders at ~40 Mbps using its stock H.264 template. For higher
 
 ### Premiere Pro
 
-Pr exports run through Adobe Media Encoder. AME must be installed and able to launch on its own.
+Pr exports run directly from Premiere using a bundled high-bitrate H.264 preset. The blurred clip lands on the lowest empty video track.
 
 ---
 
