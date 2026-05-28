@@ -47,6 +47,10 @@ var Settings = (function() {
         // ae_preRender updates this every Apply so it self-heals if user deletes.
         hq_template_status: 'unknown',
 
+        // Suppress the "project not saved → falling back to Videos folder"
+        // confirmation modal. Flipped on when the user ticks "Don't show again".
+        skip_unsaved_warning: false,
+
         // Filters
         filters:     false,
         brightness:  1.0,

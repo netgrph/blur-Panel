@@ -48,6 +48,76 @@ App = (function() {
     var _jsxPath  = path.join(_extRoot, 'jsx', 'hostscript.jsx');
     var _tempDir  = os.tmpdir();
 
+    // Pick the working folder for pre-render / blur intermediates / imported
+    // file. Primary: a BlurPanel/ subfolder next to the host project file
+    // (.aep/.prproj), resolved per Apply because the active project can
+    // change between runs. Fallback (unsaved projects only): a BlurPanel/
+    // folder inside the user's Videos folder. OS temp is never used.
+    function _videosBlurPanelDir() {
+        var sub = (process.platform === 'darwin') ? 'Movies' : 'Videos';
+        return path.join(os.homedir(), sub, 'BlurPanel');
+    }
+    function _pickWorkDir(info) {
+        var base = (info && info.projectFolder) ? info.projectFolder : null;
+        var dir;
+        if (base) {
+            dir = path.join(base, 'BlurPanel');
+            try { fs.mkdirSync(dir, { recursive: true }); return dir; }
+            catch (e) { /* fall through to Videos fallback */ }
+        }
+        dir = _videosBlurPanelDir();
+        try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+        return dir;
+    }
+
+    // Show the "project not saved → using Videos folder" confirmation modal.
+    // onAccept: user clicked Continue (and "Don't show again" was persisted
+    //           if checked).
+    // onCancel: user clicked Cancel; caller should bail out of the Apply.
+    // If the user has previously checked "Don't show again", skips the modal
+    // and calls onAccept immediately.
+    function _confirmUnsavedFallback(onAccept, onCancel) {
+        if (_settings.skip_unsaved_warning) { onAccept(); return; }
+        var modal     = document.getElementById('unsaved-modal');
+        var pathEl    = document.getElementById('unsaved-fallback-path');
+        var cb        = document.getElementById('unsaved-dontshow-cb');
+        var cancelBtn = document.getElementById('unsaved-cancel');
+        var acceptBtn = document.getElementById('unsaved-accept');
+        if (!modal || !cancelBtn || !acceptBtn) { onAccept(); return; }
+        if (pathEl) pathEl.textContent = _videosBlurPanelDir();
+        if (cb) cb.checked = false;
+
+        function cleanup() {
+            modal.classList.add('hidden');
+            cancelBtn.removeEventListener('click', onCancelClick);
+            acceptBtn.removeEventListener('click', onAcceptClick);
+        }
+        function onAcceptClick() {
+            if (cb && cb.checked) {
+                _settings.skip_unsaved_warning = true;
+                Settings.save(_settings);
+            }
+            cleanup();
+            onAccept();
+        }
+        function onCancelClick() {
+            cleanup();
+            onCancel();
+        }
+        cancelBtn.addEventListener('click', onCancelClick);
+        acceptBtn.addEventListener('click', onAcceptClick);
+        modal.classList.remove('hidden');
+    }
+
+    // Soft cancel — used when the user dismisses a prompt before work starts.
+    // Resets state without rendering the red "Error:" status that abort() does.
+    function _cancelled(msg) {
+        _running = false;
+        setApplyBusy(false);
+        setStatus(msg || 'Cancelled.');
+        setTimeout(function() { showProgress(false); }, 2500);
+    }
+
     // ffmpeg lives in bin/lib/ffmpeg/ (installer layout) or bin/ffmpeg/ (flat).
     function _findFfmpeg() {
         var exe = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
@@ -471,7 +541,7 @@ App = (function() {
     // keyframe (default GOP=250). Transcoding to all-intra H.264 or ProRes
     // before import sidesteps the issue. blur-cli's output is the source.
 
-    function transcodeForAe(inputPath, baseStem, onDone) {
+    function transcodeForAe(inputPath, baseStem, workDir, onDone) {
         var ffmpeg = _findFfmpeg();
         if (!ffmpeg) {
             // No ffmpeg — fall through to direct import. Replay corruption may occur.
@@ -495,7 +565,7 @@ App = (function() {
                       '-c:v', 'libx264', '-preset', 'ultrafast',
                       '-crf', '0', '-g', '1', '-keyint_min', '1', '-an'];
         }
-        var outputPath = path.join(_tempDir, baseStem + '_ae_' + stamp + outExt);
+        var outputPath = path.join(workDir || _tempDir, baseStem + '_ae_' + stamp + outExt);
         args.push(outputPath);
 
         setStatus('Re-encoding for AE…');
@@ -676,12 +746,27 @@ App = (function() {
             }
             if (info.error) { abort(info.error); return; }
 
-            var baseName    = info.name.replace(/[<>:"/\\|?*]/g, '_');
-            var _stamp      = Date.now();
-            var mp4RenderOut = path.join(_tempDir, baseName + '_prerender_' + _stamp + '.mp4');
-            var blurOut     = path.join(_tempDir, baseName + '_blur_' + _stamp + '.mp4');
+            function _proceed() {
+                var workDir     = _pickWorkDir(info);
+                var baseName    = info.name.replace(/[<>:"/\\|?*]/g, '_');
+                var _stamp      = Date.now();
+                var mp4RenderOut = path.join(workDir, baseName + '_prerender_' + _stamp + '.mp4');
+                var blurOut     = path.join(workDir, baseName + '_blur_' + _stamp + '.mp4');
 
-            setStatus('Pre-rendering "' + info.name + '"…');
+                setStatus('Pre-rendering "' + info.name + '"…');
+                _runAeWithPaths(info, workDir, baseName, mp4RenderOut, blurOut);
+            }
+            if (!info.projectFolder) {
+                _confirmUnsavedFallback(_proceed, function() {
+                    _cancelled('Cancelled — save the project to choose a location.');
+                });
+            } else {
+                _proceed();
+            }
+        });
+    }
+
+    function _runAeWithPaths(info, workDir, baseName, mp4RenderOut, blurOut) {
 
             csInterface.evalScript('ae_preRender(' + JSON.stringify(mp4RenderOut) + ',false)', function(res) {
                 var r;
@@ -700,7 +785,7 @@ App = (function() {
                         abort('Blur output not found: ' + blurredPath);
                         return;
                     }
-                    transcodeForAe(blurredPath, baseName, function(importPath) {
+                    transcodeForAe(blurredPath, baseName, workDir, function(importPath) {
                         setStatus('Importing result…');
                         var compIdArg = (typeof r.compId === 'number' && r.compId > 0) ? r.compId : -1;
                         csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(importPath) + ',' + compIdArg + ')', function(ir) {
@@ -717,7 +802,6 @@ App = (function() {
                     });
                 });
             });
-        });
     }
 
     // ── Premiere Pro flow ─────────────────────────────────────────────────────
@@ -732,51 +816,61 @@ App = (function() {
             }
             if (info.error) { abort(info.error); return; }
 
-            var baseName  = info.name.replace(/[<>:"/\\|?*]/g, '_');
-            var exportOut = path.join(_tempDir, baseName + '_prerender.mp4');
-            var blurOut   = path.join(_tempDir, baseName + '_blur.mp4');
+            function _proceed() {
+                var workDir   = _pickWorkDir(info);
+                var baseName  = info.name.replace(/[<>:"/\\|?*]/g, '_');
+                var exportOut = path.join(workDir, baseName + '_prerender.mp4');
+                var blurOut   = path.join(workDir, baseName + '_blur.mp4');
 
-            // Pr's exportAsMediaDirect requires a real .epr preset — empty string is rejected.
-            // We ship one in the extension bundle so no per-user setup is needed.
-            var prPresetPath = path.join(_extRoot, 'templates', 'Blur Panel Pr HQ.epr');
-            if (!fs.existsSync(prPresetPath)) {
-                abort('Missing Premiere export preset: ' + prPresetPath +
-                      ' — create one via File → Export → Media (Ctrl+M), Save Preset, ' +
-                      'and place it at templates/Blur Panel Pr HQ.epr in the extension folder.');
-                return;
-            }
-
-            setStatus('Exporting "' + info.name + '" from Premiere…');
-
-            // exportAsMediaDirect is synchronous: it blocks until the file is written,
-            // then returns true/false. No polling, no AME dependency.
-            csInterface.evalScript('pr_exportSequence(' + JSON.stringify(exportOut) + ',' + JSON.stringify(prPresetPath) + ')', function(res) {
-                var r;
-                try { r = JSON.parse(res); } catch (e) { abort('Export response: ' + res); return; }
-                if (r.error) { abort(r.error); return; }
-
-                var actualPath = r.outputPath || exportOut;
-                if (!fs.existsSync(actualPath)) {
-                    abort('Export reported success but output file is missing: ' + actualPath);
+                // Pr's exportAsMediaDirect requires a real .epr preset — empty string is rejected.
+                // We ship one in the extension bundle so no per-user setup is needed.
+                var prPresetPath = path.join(_extRoot, 'templates', 'Blur Panel Pr HQ.epr');
+                if (!fs.existsSync(prPresetPath)) {
+                    abort('Missing Premiere export preset: ' + prPresetPath +
+                          ' — create one via File → Export → Media (Ctrl+M), Save Preset, ' +
+                          'and place it at templates/Blur Panel Pr HQ.epr in the extension folder.');
                     return;
                 }
 
-                var cfgPath = writeCfg(info.fps);
-                runBlur(actualPath, blurOut, cfgPath, function(blurredPath) {
-                    if (!fs.existsSync(blurredPath)) {
-                        abort('Blur output not found: ' + blurredPath);
+                setStatus('Exporting "' + info.name + '" from Premiere…');
+
+                // exportAsMediaDirect is synchronous: it blocks until the file is written,
+                // then returns true/false. No polling, no AME dependency.
+                csInterface.evalScript('pr_exportSequence(' + JSON.stringify(exportOut) + ',' + JSON.stringify(prPresetPath) + ')', function(res) {
+                    var r;
+                    try { r = JSON.parse(res); } catch (e) { abort('Export response: ' + res); return; }
+                    if (r.error) { abort(r.error); return; }
+
+                    var actualPath = r.outputPath || exportOut;
+                    if (!fs.existsSync(actualPath)) {
+                        abort('Export reported success but output file is missing: ' + actualPath);
                         return;
                     }
-                    setStatus('Importing result…');
-                    csInterface.evalScript('pr_importToSequence(' + JSON.stringify(blurredPath) + ')', function(ir) {
-                        var irObj;
-                        try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
-                        if (irObj.error) { abort(irObj.error); return; }
-                        finish('Done — blurred clip added.');
-                        try { fs.unlinkSync(actualPath); } catch (e) {}
+
+                    var cfgPath = writeCfg(info.fps);
+                    runBlur(actualPath, blurOut, cfgPath, function(blurredPath) {
+                        if (!fs.existsSync(blurredPath)) {
+                            abort('Blur output not found: ' + blurredPath);
+                            return;
+                        }
+                        setStatus('Importing result…');
+                        csInterface.evalScript('pr_importToSequence(' + JSON.stringify(blurredPath) + ')', function(ir) {
+                            var irObj;
+                            try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
+                            if (irObj.error) { abort(irObj.error); return; }
+                            finish('Done — blurred clip added.');
+                            try { fs.unlinkSync(actualPath); } catch (e) {}
+                        });
                     });
                 });
-            });
+            }
+            if (!info.projectFolder) {
+                _confirmUnsavedFallback(_proceed, function() {
+                    _cancelled('Cancelled — save the project to choose a location.');
+                });
+            } else {
+                _proceed();
+            }
         });
     }
 

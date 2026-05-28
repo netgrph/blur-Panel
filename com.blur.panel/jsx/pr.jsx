@@ -52,6 +52,17 @@ function _pr_addOneTrack(seq, qeSeq, addV, addA) {
     return false;
 }
 
+// Parent directory of a path string — ES3-safe, handles both / and \.
+function _pr_parentDir(p) {
+    if (!p) return '';
+    var s = String(p);
+    var lastBs = s.lastIndexOf('\\');
+    var lastFs = s.lastIndexOf('/');
+    var lastSep = (lastBs > lastFs) ? lastBs : lastFs;
+    if (lastSep <= 0) return '';
+    return s.substring(0, lastSep);
+}
+
 function pr_getActiveSequence() {
     try {
         var seq = app.project.activeSequence;
@@ -60,7 +71,17 @@ function pr_getActiveSequence() {
         }
         var fps  = 254016000000 / seq.timebase;
         var name = _pr_esc(seq.name);
-        return '{"name":"' + name + '","fps":' + fps + ',"width":' + seq.frameSizeHorizontal + ',"height":' + seq.frameSizeVertical + '}';
+
+        // Folder the .prproj is saved in — routed by the panel as the base
+        // for pre-render / blur output. Empty string if project is unsaved.
+        var projectFolder = '';
+        try { projectFolder = _pr_parentDir(app.project.path); } catch (ep) {}
+
+        return '{"name":"' + name +
+               '","fps":' + fps +
+               ',"width":' + seq.frameSizeHorizontal +
+               ',"height":' + seq.frameSizeVertical +
+               ',"projectFolder":"' + _pr_esc(projectFolder) + '"}';
     } catch (e) {
         return _pr_err('pr_getActiveSequence: ' + e);
     }

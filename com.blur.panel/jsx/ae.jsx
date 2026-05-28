@@ -29,12 +29,23 @@ function ae_getActiveComp() {
         if (item === null || item === undefined || !(item instanceof CompItem)) {
             return _ae_err('No composition is selected. Click a composition in the Project panel first.');
         }
+
+        // Folder the .aep is saved in — routed by the panel as the base for
+        // pre-render / blur output. Empty string if project is unsaved.
+        var projectFolder = '';
+        try {
+            if (app.project.file && app.project.file.parent) {
+                projectFolder = app.project.file.parent.fsName;
+            }
+        } catch (ep) {}
+
         return _ae_ok({
-            name:     item.name,
-            fps:      item.frameRate,
-            width:    item.width,
-            height:   item.height,
-            duration: item.duration
+            name:          item.name,
+            fps:           item.frameRate,
+            width:         item.width,
+            height:        item.height,
+            duration:      item.duration,
+            projectFolder: projectFolder
         });
     } catch (e) {
         return _ae_err('ae_getActiveComp: ' + e);
