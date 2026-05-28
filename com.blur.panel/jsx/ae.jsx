@@ -139,11 +139,21 @@ function ae_preRender(outputPath, useLossless) {
         // AE may change the extension to match the output module codec —
         // read back the actual path it wrote to before removing the item.
         var actualPath = om.file.fsName;
+        // Capture the source comp's stable ID BEFORE removing the RQ item
+        // and switching the viewer, so the re-import can target this exact
+        // comp even if the user navigates away while blur is processing.
+        var compId = -1;
+        try { compId = item.id; } catch (eID) {}
         rqItem.remove();
+        // Render auto-switches the viewer to the Render Queue panel.
+        // Bring the source comp back into focus so the user stays visually
+        // on the comp they were just working in.
+        try { item.openInViewer(); } catch (eOV) {}
         var safePath = String(actualPath).replace(/\\/g, '/').replace(/"/g, "'");
         return '{"success":true,"actualPath":"' + safePath
             + '","tpl":"' + _ae_esc(tplInfo)
-            + '","hasHqTemplate":' + (hasHqTemplate ? 'true' : 'false') + '}';
+            + '","hasHqTemplate":' + (hasHqTemplate ? 'true' : 'false')
+            + ',"compId":' + compId + '}';
     } catch (e) {
         return _ae_err('ae_preRender: ' + e);
     }
@@ -233,18 +243,29 @@ function ae_openOMTemplateEditor() {
     }
 }
 
-function ae_importAndAddLayer(filePath) {
+function ae_importAndAddLayer(filePath, compId) {
     // Self-contained: no helper function calls so nothing external can be missing.
     try {
-        // After a render, activeItem may have changed — search all comps.
-        var item = app.project.activeItem;
-        if (!item || !(item instanceof CompItem)) {
-            // Fallback: find the first open comp
-            var i;
-            for (i = 1; i <= app.project.numItems; i++) {
-                if (app.project.item(i) instanceof CompItem) {
-                    item = app.project.item(i);
-                    break;
+        // Prefer the comp by stable ID (captured at pre-render time) so the
+        // user can switch comps during blur processing without redirecting
+        // the re-import. Fall back to activeItem / first comp only if the
+        // ID is missing or the comp has been deleted.
+        var item = null;
+        if (compId && compId > 0 && typeof app.project.itemByID === 'function') {
+            try {
+                var byId = app.project.itemByID(compId);
+                if (byId && byId instanceof CompItem) item = byId;
+            } catch (eByID) {}
+        }
+        if (!item) {
+            item = app.project.activeItem;
+            if (!item || !(item instanceof CompItem)) {
+                var i;
+                for (i = 1; i <= app.project.numItems; i++) {
+                    if (app.project.item(i) instanceof CompItem) {
+                        item = app.project.item(i);
+                        break;
+                    }
                 }
             }
         }
@@ -262,8 +283,17 @@ function ae_importAndAddLayer(filePath) {
         if (!footage) {
             return '{"error":"ae_importAndAddLayer: importFile returned null"}';
         }
+        // Tag with Orange label (index 11) so the blurred re-import is easy
+        // to spot in both the Project panel and the timeline. Mirrors the
+        // Mango/orange tag applied in pr.jsx. Non-fatal if unsupported.
+        try { footage.label = 11; } catch (eFLbl) {}
         var layer = item.layers.add(footage);
+        try { layer.label = 11; } catch (eLLbl) {}
         layer.moveToBeginning();
+        // Ensure the comp the layer was added to is the one shown in the
+        // viewer (Render Queue or another comp may have taken focus during
+        // the render).
+        try { item.openInViewer(); } catch (eOV2) {}
         return '{"success":true}';
     } catch (e) {
         var msg = String(e).replace(/\\/g, '/').replace(/"/g, "'");

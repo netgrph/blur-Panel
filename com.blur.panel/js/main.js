@@ -702,7 +702,8 @@ App = (function() {
                     }
                     transcodeForAe(blurredPath, baseName, function(importPath) {
                         setStatus('Importing result…');
-                        csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(importPath) + ')', function(ir) {
+                        var compIdArg = (typeof r.compId === 'number' && r.compId > 0) ? r.compId : -1;
+                        csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(importPath) + ',' + compIdArg + ')', function(ir) {
                             var irObj;
                             try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
                             if (irObj.error) { abort(irObj.error); return; }
