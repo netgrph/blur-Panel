@@ -63,10 +63,10 @@ if !errorlevel! geq 8 (
 
 echo         OK  ^>  %INSTALL_DIR%
 
-:: ── 4. Unpack bundled ffmpeg archives ────────────────────────────────────────
-::      ffmpeg binaries are shipped as ffmpeg.7z in both bin\ffmpeg\ and
-::      bin\lib\ffmpeg\ to keep the GitHub repo under file-size limits.
-::      Extract them in place using the bundled 7z.exe from bin\vapoursynth\.
+:: ── 4. Unpack bundled ffmpeg archive ─────────────────────────────────────────
+::      ffmpeg binaries are shipped as ffmpeg.7z in bin\lib\ffmpeg\ to keep the
+::      GitHub repo under file-size limits.
+::      Extracted in place using the bundled 7z.exe from bin\vapoursynth\.
 ::      Re-extracted on every run because robocopy /mir would otherwise wipe
 ::      the extracted files on the next update.
 
@@ -80,20 +80,10 @@ if not exist "%SEVENZ%" (
     pause & exit /b 1
 )
 
-set "FFMPEG_ARCHIVE_1=%INSTALL_DIR%\bin\ffmpeg\ffmpeg.7z"
-set "FFMPEG_ARCHIVE_2=%INSTALL_DIR%\bin\lib\ffmpeg\ffmpeg.7z"
+set "FFMPEG_ARCHIVE=%INSTALL_DIR%\bin\lib\ffmpeg\ffmpeg.7z"
 
-if exist "%FFMPEG_ARCHIVE_1%" (
-    "%SEVENZ%" x -y -o"%INSTALL_DIR%\bin\ffmpeg" "%FFMPEG_ARCHIVE_1%" >nul
-    if !errorlevel! neq 0 (
-        echo  [ERROR] Failed to extract bin\ffmpeg\ffmpeg.7z
-        echo.
-        pause & exit /b 1
-    )
-)
-
-if exist "%FFMPEG_ARCHIVE_2%" (
-    "%SEVENZ%" x -y -o"%INSTALL_DIR%\bin\lib\ffmpeg" "%FFMPEG_ARCHIVE_2%" >nul
+if exist "%FFMPEG_ARCHIVE%" (
+    "%SEVENZ%" x -y -o"%INSTALL_DIR%\bin\lib\ffmpeg" "%FFMPEG_ARCHIVE%" >nul
     if !errorlevel! neq 0 (
         echo  [ERROR] Failed to extract bin\lib\ffmpeg\ffmpeg.7z
         echo.

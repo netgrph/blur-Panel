@@ -26,7 +26,7 @@ Configure your blur and interpolation settings in the panel, hit **Apply**, and 
 2. **Run `install.bat`** (Windows). It will:
    - Enable unsigned CEP extensions (`PlayerDebugMode` registry keys for CSXS 9 / 10 / 11)
    - Copy `com.blur.panel/` into `%APPDATA%\Adobe\CEP\extensions\`
-   - Unpack the bundled ffmpeg binaries from the shipped `.7z` archives
+   - Unpack the bundled ffmpeg binaries from the shipped `.7z` archive
    - Clean up any obsolete legacy startup scripts from previous installer versions
 3. **Restart** After Effects or Premiere Pro.
 4. Open the panel from **Window → Extensions → Blur Panel**.
@@ -39,7 +39,7 @@ If `install.bat` cannot be run:
 
 1. Double-click `_enable_debug_mode.reg` to set the registry keys.
 2. Copy the `com.blur.panel/` folder into `%APPDATA%\Adobe\CEP\extensions\`.
-3. Manually extract `com.blur.panel\bin\ffmpeg\ffmpeg.7z` and `com.blur.panel\bin\lib\ffmpeg\ffmpeg.7z` in place (use 7-Zip — a copy of `7z.exe` is bundled in `com.blur.panel\bin\vapoursynth\`).
+3. Manually extract `com.blur.panel\bin\lib\ffmpeg\ffmpeg.7z` in place (use 7-Zip — a copy of `7z.exe` is bundled in `com.blur.panel\bin\vapoursynth\`).
 4. Restart your Adobe app.
 
 ---

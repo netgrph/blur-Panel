@@ -118,14 +118,11 @@ App = (function() {
         setTimeout(function() { showProgress(false); }, 2500);
     }
 
-    // ffmpeg lives in bin/lib/ffmpeg/ (installer layout) or bin/ffmpeg/ (flat).
+    // ffmpeg lives in bin/lib/ffmpeg/ (bundled alongside blur-cli's other deps).
     function _findFfmpeg() {
         var exe = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
-        var p1  = path.join(_binDir, 'lib', 'ffmpeg', exe);
-        var p2  = path.join(_binDir, 'ffmpeg', exe);
-        if (fs.existsSync(p1)) return p1;
-        if (fs.existsSync(p2)) return p2;
-        return null;
+        var p   = path.join(_binDir, 'lib', 'ffmpeg', exe);
+        return fs.existsSync(p) ? p : null;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
