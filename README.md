@@ -7,7 +7,7 @@ Configure your blur and interpolation settings in the panel, hit **Apply**, and 
 > The panel is a UI front-end for f0e/blur — all blur and interpolation work is done by f0e/blur itself.
 
 <p align="center">
-  <img src="Komp%201_2026-05-28_03-51.gif" alt="Install + usage demo" width="720">
+  <img src="https://github.com/netgrph/blur-Panel/raw/bb2a95133b2a4d598febefd16aa8d9700ec05ac5/Komp%201_2026-05-28_03-51.gif" alt="Install + usage demo" width="720">
 </p>
 
 ---
