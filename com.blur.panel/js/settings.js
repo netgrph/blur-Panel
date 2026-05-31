@@ -42,6 +42,13 @@ var Settings = (function() {
         // 'prores' = ProRes 422 HQ (larger, rock-solid AE compat).
         ae_import_format: 'h264_lossless',
 
+        // Premiere re-import transcode (same replay-corruption fix as AE, kept
+        // independent of ae_import_format). 'h264_lossless' = libx264 -crf 0 -g 1
+        // (.mp4), 'prores' = ProRes 422 HQ (.mov). pr_import_audio keeps the
+        // clip's audio (-c:a copy) through the transcode when true.
+        pr_import_format: 'h264_lossless',
+        pr_import_audio:  true,
+
         // Cached state of the user-created "Blur Panel HQ" OM template.
         // 'unknown' on first launch, 'present' / 'missing' after probe or render.
         // ae_preRender updates this every Apply so it self-heals if user deletes.

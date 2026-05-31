@@ -166,13 +166,20 @@ App = (function() {
             wireHqModal();
             updateHqBadge(_settings.hq_template_status || 'unknown');
 
-            // Hide AE-only UI on Premiere (HQ template + AE re-import format dropdown)
-            if (_appId === 'PPRO') {
-                var aeOnlyIds = ['hq-template-row', 'hq-divider', 'ae-import-row', 'ae-import-divider'];
-                for (var k = 0; k < aeOnlyIds.length; k++) {
-                    var el = document.getElementById(aeOnlyIds[k]);
-                    if (el) el.style.display = 'none';
-                }
+            // Show only the host-relevant re-import controls: AE gets the HQ
+            // template + AE re-import dropdown; Pr gets its own format dropdown +
+            // Keep-audio toggle. Hide the other host's rows.
+            var aeOnlyIds = ['hq-template-row', 'hq-divider', 'ae-import-row', 'ae-import-divider'];
+            var prOnlyIds = ['pr-import-row', 'pr-import-divider', 'pr-audio-row'];
+            var hideIds = (_appId === 'PPRO') ? aeOnlyIds : prOnlyIds;
+            var showIds = (_appId === 'PPRO') ? prOnlyIds : aeOnlyIds;
+            for (var k = 0; k < hideIds.length; k++) {
+                var hEl = document.getElementById(hideIds[k]);
+                if (hEl) hEl.style.display = 'none';
+            }
+            for (var j = 0; j < showIds.length; j++) {
+                var sEl = document.getElementById(showIds[j]);
+                if (sEl) sEl.style.display = '';
             }
 
 
@@ -214,7 +221,7 @@ App = (function() {
             'deduplicate', 'deduplicate_method',
             'pre_interpolate', 'pre_interpolated_fps',
             'encode_preset', 'gpu_decoding', 'gpu_interpolation', 'gpu_encoding',
-            'ae_import_format',
+            'ae_import_format', 'pr_import_format', 'pr_import_audio',
             'filters'
         ];
         plain.forEach(function(id) {
@@ -264,6 +271,8 @@ App = (function() {
         setVal('gpu_interpolation', s.gpu_interpolation);
         setVal('gpu_encoding',      s.gpu_encoding);
         setVal('ae_import_format',  s.ae_import_format);
+        setVal('pr_import_format',  s.pr_import_format);
+        setVal('pr_import_audio',   s.pr_import_audio);
 
         setVal('filters',       s.filters);
         setVal('brightness',    s.brightness);
@@ -307,6 +316,8 @@ App = (function() {
         _settings.gpu_interpolation = getVal('gpu_interpolation');
         _settings.gpu_encoding      = getVal('gpu_encoding');
         _settings.ae_import_format  = getVal('ae_import_format');
+        _settings.pr_import_format  = getVal('pr_import_format');
+        _settings.pr_import_audio   = getVal('pr_import_audio');
 
         _settings.filters    = getVal('filters');
         _settings.brightness = parseFloat(getVal('brightness'));
@@ -533,12 +544,14 @@ App = (function() {
         });
     }
 
-    // ── AE re-import transcode ────────────────────────────────────────────────
-    // AE's H.264 decoder corrupts on replay when frames depend on a distant
-    // keyframe (default GOP=250). Transcoding to all-intra H.264 or ProRes
-    // before import sidesteps the issue. blur-cli's output is the source.
+    // ── Re-import transcode ───────────────────────────────────────────────────
+    // Host H.264 decoders (AE and Pr alike) corrupt on replay when frames depend
+    // on a distant keyframe (blur-cli's default GOP=250). Transcoding to all-intra
+    // H.264 or ProRes before import sidesteps the issue. blur-cli's output is the
+    // source. AE re-import is video-only (keepAudio=false); Pr keeps audio so the
+    // clip's sound survives onto the audio track.
 
-    function transcodeForAe(inputPath, baseStem, workDir, onDone) {
+    function transcodeForReimport(inputPath, baseStem, workDir, fmt, keepAudio, onDone) {
         var ffmpeg = _findFfmpeg();
         if (!ffmpeg) {
             // No ffmpeg — fall through to direct import. Replay corruption may occur.
@@ -547,7 +560,6 @@ App = (function() {
             return;
         }
 
-        var fmt    = _settings.ae_import_format || 'h264_lossless';
         var stamp  = Date.now();
         var outExt, args;
         if (fmt === 'prores') {
@@ -555,17 +567,20 @@ App = (function() {
             args   = ['-y', '-i', inputPath,
                       '-c:v', 'prores_ks', '-profile:v', '3',
                       '-vendor', 'apl0', '-pix_fmt', 'yuv422p10le',
-                      '-qscale:v', '9', '-an'];
+                      '-qscale:v', '9'];
         } else {
             outExt = '.mp4';
             args   = ['-y', '-i', inputPath,
                       '-c:v', 'libx264', '-preset', 'ultrafast',
-                      '-crf', '0', '-g', '1', '-keyint_min', '1', '-an'];
+                      '-crf', '0', '-g', '1', '-keyint_min', '1'];
         }
-        var outputPath = path.join(workDir || _tempDir, baseStem + '_ae_' + stamp + outExt);
+        // Keep audio losslessly (AAC copies into both .mp4 and .mov; no-op if the
+        // source has no audio stream) or strip it entirely.
+        if (keepAudio) { args.push('-c:a', 'copy'); } else { args.push('-an'); }
+        var outputPath = path.join(workDir || _tempDir, baseStem + '_reenc_' + stamp + outExt);
         args.push(outputPath);
 
-        setStatus('Re-encoding for AE…');
+        setStatus('Re-encoding…');
         var proc = child_process.spawn(ffmpeg, args);
         var stderr = '';
         proc.stderr.on('data', function(b) { stderr += b.toString(); });
@@ -782,7 +797,8 @@ App = (function() {
                         abort('Blur output not found: ' + blurredPath);
                         return;
                     }
-                    transcodeForAe(blurredPath, baseName, workDir, function(importPath) {
+                    var aeFmt = _settings.ae_import_format || 'h264_lossless';
+                    transcodeForReimport(blurredPath, baseName, workDir, aeFmt, false, function(importPath) {
                         setStatus('Importing result…');
                         var compIdArg = (typeof r.compId === 'number' && r.compId > 0) ? r.compId : -1;
                         csInterface.evalScript('ae_importAndAddLayer(' + JSON.stringify(importPath) + ',' + compIdArg + ')', function(ir) {
@@ -850,13 +866,23 @@ App = (function() {
                             abort('Blur output not found: ' + blurredPath);
                             return;
                         }
-                        setStatus('Importing result…');
-                        csInterface.evalScript('pr_importToSequence(' + JSON.stringify(blurredPath) + ')', function(ir) {
-                            var irObj;
-                            try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
-                            if (irObj.error) { abort(irObj.error); return; }
-                            finish('Done — blurred clip added.');
-                            try { fs.unlinkSync(actualPath); } catch (e) {}
+                        // Re-encode to all-intra (same replay-corruption fix as AE) before
+                        // importing. Pr keeps audio by default so it survives onto the track.
+                        var prFmt     = _settings.pr_import_format || 'h264_lossless';
+                        var keepAudio = _settings.pr_import_audio !== false;
+                        transcodeForReimport(blurredPath, baseName, workDir, prFmt, keepAudio, function(importPath) {
+                            setStatus('Importing result…');
+                            csInterface.evalScript('pr_importToSequence(' + JSON.stringify(importPath) + ')', function(ir) {
+                                var irObj;
+                                try { irObj = JSON.parse(ir); } catch (e) { abort('Import response: ' + ir); return; }
+                                if (irObj.error) { abort(irObj.error); return; }
+                                finish('Done — blurred clip added.');
+                                try { fs.unlinkSync(actualPath); } catch (e) {}
+                                // If we transcoded, delete blur-cli's intermediate output.
+                                if (importPath !== blurredPath) {
+                                    try { fs.unlinkSync(blurredPath); } catch (e) {}
+                                }
+                            });
                         });
                     });
                 });
